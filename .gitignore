@@ -1,0 +1,84 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+captures/
+.gradle/
+local.properties
+.idea/
+
+# Gradle files
+.gradle/
+build/
+*/build/
+
+# Log files
+*.log
+
+# Android Studio Navigation editor temp files
+.navigation/
+
+# Android Studio captures folder
+captures/
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services (do not check in secrets)
+google-services.json
+google-services.plist
+
+# NDK
+obj/
+
+# IntelliJ project files
+*.iml
+.idea/
+
+# External native build folders
+.externalNativeBuild/
+
+# Flutter specific
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.dart_tool/
+.flutter-*
+
+# VS Code
+.vscode/
+
+# Misc
+.DS_Store
+*.swp
+*.swo
+*.orig
+*.bak
+*.tmp
+
+# Crashlytics / Firebase
+crashlytics-build.properties
+fabric.properties
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Kotlin/Java build cache
+.kotlinc/
+.kts/
