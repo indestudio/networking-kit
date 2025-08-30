@@ -2,13 +2,23 @@ package com.indiedev.networking.api
 
 interface NetworkExternalDependencies {
 
-    fun getBaseUrls(): BaseUrls
+    fun getBaseUrls(): GatewaysBaseUrls
 
-    fun getSessionManager(): SessionManager
+    fun getSessionManager(): SessionManager = object : SessionManager {
+        override fun getAuthToken(): String = ""
+        override fun getRefreshToken(): String = ""
+        override fun getUsername(): String = ""
+        override fun onTokenRefreshed(token: String, expiresAt: String, refreshToken: String) {}
+        override fun onTokenExpires() {}
+    }
 
-    fun getNetworkEventLogger(): NetworkEventLogger
+    fun getNetworkEventLogger(): NetworkEventLogger = object : NetworkEventLogger {
+        override fun logEvent(eventName: String, properties: HashMap<String, Any>) {}
+    }
 
-    fun getNetworkExceptionLogger(): NetworkApiExceptionLogger
+    fun getNetworkExceptionLogger(): NetworkApiExceptionLogger = object : NetworkApiExceptionLogger {
+        override fun logException(throwable: Throwable) {}
+    }
 
     fun getCertTransparencyFlagProvider(): CertTransparencyFlagProvider {
         return object : CertTransparencyFlagProvider {

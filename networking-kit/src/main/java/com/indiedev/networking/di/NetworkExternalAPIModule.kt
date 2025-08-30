@@ -17,8 +17,8 @@ class NetworkExternalAPIModule {
     @Provides
     fun provideExternalAPI(
         @MainGateway retrofitMain: Retrofit,
-        @SecureGateway retrofitSecure: Retrofit,
-        @IdentityGateway retrofitIdentity: Retrofit,
+        @SecureGateway retrofitSecure: Retrofit?,
+        @IdentityGateway retrofitIdentity: Retrofit?,
     ): NetworkExternalAPI {
         return object : NetworkExternalAPI {
             override fun <T> createServiceOnMainGateway(type: Class<T>): T {
@@ -26,11 +26,13 @@ class NetworkExternalAPIModule {
             }
 
             override fun <T> createServiceOnSecureGateway(type: Class<T>): T {
-                return retrofitSecure.create(type)
+                return retrofitSecure?.create(type) 
+                    ?: throw IllegalStateException("Secure gateway URL is not configured")
             }
 
             override fun <T> createServiceOnIdentityGateway(type: Class<T>): T {
-                return retrofitIdentity.create(type)
+                return retrofitIdentity?.create(type)
+                    ?: throw IllegalStateException("Identity gateway URL is not configured")
             }
         }
     }

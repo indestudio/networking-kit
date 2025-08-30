@@ -22,11 +22,8 @@ import okhttp3.Route
 import org.json.JSONObject
 import retrofit2.HttpException
 import java.util.concurrent.atomic.AtomicInteger
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-internal class AccessTokenAuthenticator @Inject constructor(
+internal class AccessTokenAuthenticator (
     private val tokenRefreshService: TokenRefreshService,
     private val sessionManager: SessionManager,
     private val eventsHelper: EventsHelper,

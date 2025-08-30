@@ -3,7 +3,7 @@ package com.indiedev.networking.di
 import android.content.Context
 import com.appmattus.certificatetransparency.certificateTransparencyInterceptor
 import com.appmattus.certificatetransparency.loglist.LogListDataSourceFactory
-import com.indiedev.networking.api.BaseUrls
+import com.indiedev.networking.api.GatewaysBaseUrls
 import com.indiedev.networking.api.CertTransparencyFlagProvider
 import com.indiedev.networking.api.SessionManager
 import com.indiedev.networking.authenticator.AccessTokenAuthenticator
@@ -18,6 +18,7 @@ import com.indiedev.networking.qualifiers.SecureGateway
 import com.indiedev.networking.token.AuthTokenProvider
 import com.indiedev.networking.token.TokenRefreshService
 import com.indiedev.networking.utils.AppVersionDetailsProviderImp
+import com.indiedev.networking.event.EventsHelper
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.indiedev.networking.BuildConfig
 import com.indiedev.networking.FlipperInterceptorFactory
@@ -27,6 +28,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Authenticator
 import okhttp3.Cache
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -65,7 +67,7 @@ object NetworkModule {
         backendInterceptor: HeadersInterceptor,
         apiFailureInterceptor: ApiFailureInterceptor,
         @Named(CERTIFICATE_INTERCEPTOR) certInterceptor: Interceptor,
-        authenticator: AccessTokenAuthenticator,
+        authenticator: Authenticator,
     ): OkHttpClient {
         val builder = OkHttpClient.Builder()
             .writeTimeout(EXTENDED_WRITE_TIMEOUT, TimeUnit.SECONDS)
@@ -97,6 +99,20 @@ object NetworkModule {
         return Cache(context.cacheDir, CACHE_SIZE)
     }
 
+    @Singleton
+    @Provides
+    internal fun provideAuthenticator(
+        tokenRefreshService: TokenRefreshService?,
+        sessionManager: SessionManager,
+        eventsHelper: EventsHelper,
+    ): Authenticator {
+        return if (tokenRefreshService != null) {
+            AccessTokenAuthenticator(tokenRefreshService, sessionManager, eventsHelper)
+        } else {
+            Authenticator.NONE
+        }
+    }
+
     @Provides
     internal fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
         val httpLoggingInterceptor = HttpLoggingInterceptor()
@@ -111,13 +127,13 @@ object NetworkModule {
     @Singleton
     @MainGateway
     @Provides
-    fun provideGatewayRetrofit(
+    fun provideMainGatewayRetrofit(
         okHttpClient: OkHttpClient,
-        baseUrls: BaseUrls,
+        gatewaysBaseUrls: GatewaysBaseUrls,
         json: Json,
     ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(baseUrls.getMainGatewayUrl())
+            .baseUrl(gatewaysBaseUrls.getMainGatewayUrl())
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
@@ -126,13 +142,17 @@ object NetworkModule {
     @Singleton
     @SecureGateway
     @Provides
-    fun provideBazaarPayRetrofit(
+    fun provideSecureGatewayRetrofit(
         okHttpClient: OkHttpClient,
-        baseUrls: BaseUrls,
+        gatewaysBaseUrls: GatewaysBaseUrls,
         json: Json,
-    ): Retrofit {
+    ): Retrofit? {
+        val secureUrl = gatewaysBaseUrls.getSecureGatewayUrl()
+        if (secureUrl.isBlank()) {
+            return null
+        }
         return Retrofit.Builder()
-            .baseUrl(baseUrls.getSecureGatewayUrl())
+            .baseUrl(secureUrl)
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
@@ -141,13 +161,17 @@ object NetworkModule {
     @Singleton
     @IdentityGateway
     @Provides
-    fun provideBazaarIdentityRetrofit(
+    fun provideAuthGatewayRetrofit(
         okHttpClient: OkHttpClient,
-        baseUrls: BaseUrls,
+        gatewaysBaseUrls: GatewaysBaseUrls,
         json: Json,
-    ): Retrofit {
+    ): Retrofit? {
+        val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
+        if (authUrl.isBlank()) {
+            return null
+        }
         return Retrofit.Builder()
-            .baseUrl(baseUrls.getIdentityGatewayUrl())
+            .baseUrl(authUrl)
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
@@ -172,11 +196,15 @@ object NetworkModule {
     @Provides
     internal fun provideTokenRefreshService(
         @ApplicationContext context: Context,
-        baseUrls: BaseUrls,
+        gatewaysBaseUrls: GatewaysBaseUrls,
         json: Json,
-    ): TokenRefreshService {
+    ): TokenRefreshService? {
+        val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
+        if (authUrl.isBlank()) {
+            return null
+        }
         return Retrofit.Builder()
-            .baseUrl(baseUrls.getIdentityGatewayUrl())
+            .baseUrl(authUrl)
             .client(getRetrofitClient(context))
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
@@ -207,15 +235,21 @@ object NetworkModule {
     @Named(CERTIFICATE_INTERCEPTOR)
     internal fun provideCertificateInterceptor(
         certTransparencyFlagProvider: CertTransparencyFlagProvider,
-        baseUrls: BaseUrls,
+        gatewaysBaseUrls: GatewaysBaseUrls,
     ): Interceptor {
         return if (certTransparencyFlagProvider.isFlagEnable().not()) {
             Interceptor { chain -> chain.proceed(chain.request()) }
         } else {
             certificateTransparencyInterceptor {
-                +baseUrls.getMainGatewayUrl()
-                +baseUrls.getSecureGatewayUrl()
-                +baseUrls.getIdentityGatewayUrl()
+                +gatewaysBaseUrls.getMainGatewayUrl()
+                val secureUrl = gatewaysBaseUrls.getSecureGatewayUrl()
+                if (secureUrl.isNotBlank()) {
+                    +secureUrl
+                }
+                val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
+                if (authUrl.isNotBlank()) {
+                    +authUrl
+                }
 
                 setLogListService(
                     LogListDataSourceFactory

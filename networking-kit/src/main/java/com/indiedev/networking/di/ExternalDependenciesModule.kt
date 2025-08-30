@@ -1,6 +1,6 @@
 package com.indiedev.networking.di
 
-import com.indiedev.networking.api.BaseUrls
+import com.indiedev.networking.api.GatewaysBaseUrls
 import com.indiedev.networking.api.CertTransparencyFlagProvider
 import com.indiedev.networking.api.NetworkApiExceptionLogger
 import com.indiedev.networking.api.NetworkEventLogger
@@ -18,7 +18,7 @@ class ExternalDependenciesModule {
 
     @Singleton
     @Provides
-    internal fun provideBaseUrls(dependencies: NetworkExternalDependencies): BaseUrls =
+    internal fun provideBaseUrls(dependencies: NetworkExternalDependencies): GatewaysBaseUrls =
         dependencies.getBaseUrls()
 
     @Provides
