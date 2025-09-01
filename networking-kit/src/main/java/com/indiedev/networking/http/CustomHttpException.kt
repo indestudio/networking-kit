@@ -1,6 +1,5 @@
 package com.indiedev.networking.http
 
-import org.json.JSONObject
 import org.json.simple.parser.JSONParser
 
 open class CustomHttpException(private val response: retrofit2.Response<*>) : RuntimeException() {
