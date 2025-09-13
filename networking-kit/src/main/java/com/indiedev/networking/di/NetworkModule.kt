@@ -5,6 +5,7 @@ import com.appmattus.certificatetransparency.certificateTransparencyInterceptor
 import com.appmattus.certificatetransparency.loglist.LogListDataSourceFactory
 import com.indiedev.networking.api.GatewaysBaseUrls
 import com.indiedev.networking.api.CertTransparencyFlagProvider
+import com.indiedev.networking.api.ErrorCodeProvider
 import com.indiedev.networking.api.SessionManager
 import com.indiedev.networking.authenticator.AccessTokenAuthenticator
 import com.indiedev.networking.interceptor.ApiFailureInterceptor
@@ -16,7 +17,7 @@ import com.indiedev.networking.qualifiers.IdentityGateway
 import com.indiedev.networking.qualifiers.MainGateway
 import com.indiedev.networking.qualifiers.SecureGateway
 import com.indiedev.networking.token.AuthTokenProvider
-import com.indiedev.networking.token.TokenRefreshService
+import com.indiedev.networking.token.TokenRefreshProvider
 import com.indiedev.networking.utils.AppVersionDetailsProviderImp
 import com.indiedev.networking.event.EventsHelper
 import com.chuckerteam.chucker.api.ChuckerInterceptor
@@ -102,12 +103,13 @@ object NetworkModule {
     @Singleton
     @Provides
     internal fun provideAuthenticator(
-        tokenRefreshService: TokenRefreshService?,
+        tokenRefreshProvider: TokenRefreshProvider?,
         sessionManager: SessionManager,
         eventsHelper: EventsHelper,
+        errorCodeProvider: ErrorCodeProvider,
     ): Authenticator {
-        return if (tokenRefreshService != null) {
-            AccessTokenAuthenticator(tokenRefreshService, sessionManager, eventsHelper)
+        return if (tokenRefreshProvider != null) {
+            AccessTokenAuthenticator(tokenRefreshProvider, sessionManager, eventsHelper, errorCodeProvider)
         } else {
             Authenticator.NONE
         }
@@ -192,24 +194,6 @@ object NetworkModule {
         )
     }
 
-    @Singleton
-    @Provides
-    internal fun provideTokenRefreshService(
-        @ApplicationContext context: Context,
-        gatewaysBaseUrls: GatewaysBaseUrls,
-        json: Json,
-    ): TokenRefreshService? {
-        val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
-        if (authUrl.isBlank()) {
-            return null
-        }
-        return Retrofit.Builder()
-            .baseUrl(authUrl)
-            .client(getRetrofitClient(context))
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(TokenRefreshService::class.java)
-    }
 
     private fun getRetrofitClient(
         context: Context,

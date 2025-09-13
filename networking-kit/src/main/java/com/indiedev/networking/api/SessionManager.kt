@@ -7,6 +7,8 @@ interface SessionManager {
     fun getRefreshToken(): String
 
     fun getUsername(): String
+    
+    fun getSessionData(): Map<String, String>
 
     fun onTokenRefreshed(token: String, expiresAt: String, refreshToken: String)
 

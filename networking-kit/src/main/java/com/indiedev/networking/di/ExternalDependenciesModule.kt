@@ -2,10 +2,12 @@ package com.indiedev.networking.di
 
 import com.indiedev.networking.api.GatewaysBaseUrls
 import com.indiedev.networking.api.CertTransparencyFlagProvider
+import com.indiedev.networking.api.ErrorCodeProvider
 import com.indiedev.networking.api.NetworkApiExceptionLogger
 import com.indiedev.networking.api.NetworkEventLogger
 import com.indiedev.networking.api.NetworkExternalDependencies
 import com.indiedev.networking.api.SessionManager
+import com.indiedev.networking.token.TokenRefreshProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -41,4 +43,17 @@ class ExternalDependenciesModule {
         dependencies: NetworkExternalDependencies,
     ): CertTransparencyFlagProvider =
         dependencies.getCertTransparencyFlagProvider()
+
+    @Provides
+    internal fun provideTokenRefreshProvider(
+        dependencies: NetworkExternalDependencies,
+    ): TokenRefreshProvider? =
+        dependencies.getTokenRefreshProvider()
+
+    @Singleton
+    @Provides
+    internal fun provideErrorCodeProvider(
+        dependencies: NetworkExternalDependencies,
+    ): ErrorCodeProvider =
+        dependencies.getErrorCodeProvider()
 }
