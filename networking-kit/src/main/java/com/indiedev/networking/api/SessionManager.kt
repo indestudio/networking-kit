@@ -1,6 +1,6 @@
 package com.indiedev.networking.api
 
-interface SessionManager {
+interface SessionManager<P, R> {
 
     fun getAuthToken(): String
 
@@ -10,7 +10,9 @@ interface SessionManager {
     
     fun getSessionData(): Map<String, String>
 
-    fun onTokenRefreshed(token: String, expiresAt: String, refreshToken: String)
+    fun createRefreshRequest(): P
+
+    fun onTokenRefreshed(response: R)
 
     fun onTokenExpires()
 }

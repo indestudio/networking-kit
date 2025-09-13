@@ -1,13 +1,11 @@
 package com.indiedev.networking.authenticator
 
-import com.indiedev.networking.api.ErrorCodeProvider
 import com.indiedev.networking.api.SessionManager
+import com.indiedev.networking.api.TokenRefreshApi
 import com.indiedev.networking.common.EMPTY_STRING
 import com.indiedev.networking.common.PREFIX_AUTH_TOKEN
 import com.indiedev.networking.event.EventsHelper
 import com.indiedev.networking.event.EventsNames
-import com.indiedev.networking.token.TokenRefreshProvider
-import com.indiedev.networking.token.TokenRefreshResult
 import com.indiedev.networking.utils.Result
 import com.indiedev.networking.utils.data
 import com.indiedev.networking.utils.safeApiCall
@@ -23,11 +21,10 @@ import org.json.JSONObject
 import retrofit2.HttpException
 import java.util.concurrent.atomic.AtomicInteger
 
-internal class AccessTokenAuthenticator (
-    private val tokenRefreshProvider: TokenRefreshProvider,
-    private val sessionManager: SessionManager,
+internal class AccessTokenAuthenticator<P, R>(
+    private val tokenRefreshApi: TokenRefreshApi<P, R>,
+    private val sessionManager: SessionManager<P, R>,
     private val eventsHelper: EventsHelper,
-    private val errorCodeProvider: ErrorCodeProvider,
 ) : Authenticator {
 
     private val mutex = Mutex()
@@ -71,12 +68,9 @@ internal class AccessTokenAuthenticator (
 
         repeat(3) {
             when (
-                val tokenResponse: Result<TokenRefreshResult> = safeApiCall {
-                    tokenRefreshProvider.refreshToken(
-                        sessionManager.getAuthToken(),
-                        sessionManager.getRefreshToken(),
-                        sessionManager.getSessionData()
-                    )
+                val tokenResponse: Result<R> = safeApiCall {
+                    val request = sessionManager.createRefreshRequest()
+                    tokenRefreshApi.renewAccessToken(request)
                 }
             ) {
                 is Result.Success -> {
@@ -87,10 +81,10 @@ internal class AccessTokenAuthenticator (
                     val error = tokenResponse as Result.Error
 
                     if (shouldAbortDueToHttpException(error.exception)) {
-                        if (isRefreshTokenExpiredError(error.exception)) {
+                        if (tokenRefreshApi.isRefreshTokenExpiredError(error.exception)) {
+                            eventsHelper.logEvent(EventsNames.EVENT_REFRESH_TOKEN_NOT_VALID)
                             sessionManager.onTokenExpires()
                         }
-
                         shouldAbort = waitingCount.get() > 1
 
                         return null
@@ -120,28 +114,6 @@ internal class AccessTokenAuthenticator (
         return true
     }
 
-    @Suppress("MagicNumber")
-    private fun isRefreshTokenExpiredError(exception: Throwable?): Boolean {
-        val httpException = exception as HttpException
-
-        val response = httpException.response() ?: return false
-        val responseCode = response.code()
-        val errorCode = getErrorCode(response.errorBody())
-
-        val isUserSessionNotFound = responseCode == errorCodeProvider.getUserSessionNotFoundHttpStatusCode() && errorCode == errorCodeProvider.getUserSessionNotFoundErrorCode()
-        val isRefreshTokenExpired = responseCode == errorCodeProvider.getRefreshTokenExpiredHttpStatusCode() && errorCode == errorCodeProvider.getRefreshTokenExpiredErrorCode()
-
-        val shouldAbort = isUserSessionNotFound || isRefreshTokenExpired
-
-        return shouldAbort.also {
-            if (it) {
-                eventsHelper.logEvent(
-                    EventsNames.EVENT_REFRESH_TOKEN_NOT_VALID,
-                    eventsHelper.getEventProperties(responseCode, errorCode),
-                )
-            }
-        }
-    }
 
     private fun logErrorEvent(throwable: Throwable?) {
         val msg = "${throwable?.javaClass?.simpleName}  ${throwable?.message}"
@@ -152,30 +124,17 @@ internal class AccessTokenAuthenticator (
         )
     }
 
-    private fun getErrorCode(errorBody: ResponseBody?): Int {
-        return try {
-            val rawBody = errorBody?.string() ?: return 0
-            JSONObject(rawBody).getInt("code")
-        } catch (exception: Exception) {
-            0
-        }
-    }
-
     private fun handleSuccess(
-        tokenResponse: Result<TokenRefreshResult>,
+        tokenResponse: Result<R>,
         response: Response,
     ): Request {
         tokenResponse.data?.let {
-            sessionManager.onTokenRefreshed(
-                it.accessToken,
-                it.expiresAt,
-                it.refreshToken,
-            )
+            sessionManager.onTokenRefreshed(it)
         }
 
         return newRequestWithAccessToken(
             response.request,
-            tokenResponse.data?.accessToken ?: EMPTY_STRING,
+            sessionManager.getAuthToken(),
         )
     }
 
@@ -194,3 +153,4 @@ internal class AccessTokenAuthenticator (
         const val AUTHORIZATION_HEADER = "Authorization"
     }
 }
+

@@ -1,24 +1,21 @@
 package com.indiedev.networking.api
 
-import com.indiedev.networking.token.TokenRefreshProvider
-
-interface ErrorCodeProvider {
-    fun getRefreshTokenExpiredErrorCode(): Int = 1001
-    fun getUserSessionNotFoundErrorCode(): Int = 1002
-    fun getUserSessionNotFoundHttpStatusCode(): Int = 403
-    fun getRefreshTokenExpiredHttpStatusCode(): Int = 401
+interface TokenRefreshApi<P, R> {
+    suspend fun renewAccessToken(request: P): R
+    fun isRefreshTokenExpiredError(exception: Throwable?): Boolean
 }
 
 interface NetworkExternalDependencies {
 
     fun getBaseUrls(): GatewaysBaseUrls
 
-    fun getSessionManager(): SessionManager = object : SessionManager {
+    fun  getSessionManager(): SessionManager<*, *> = object : SessionManager<Any, Any> {
         override fun getAuthToken(): String = ""
         override fun getRefreshToken(): String = ""
         override fun getUsername(): String = ""
         override fun getSessionData(): Map<String, String> = emptyMap()
-        override fun onTokenRefreshed(token: String, expiresAt: String, refreshToken: String) {}
+        override fun createRefreshRequest(): Any = throw NotImplementedError("Must be implemented by container app")
+        override fun onTokenRefreshed(response: Any) {}
         override fun onTokenExpires() {}
     }
 
@@ -38,7 +35,6 @@ interface NetworkExternalDependencies {
         }
     }
 
-    fun getTokenRefreshProvider(): TokenRefreshProvider? = null
+    fun getTokenRefreshApiClass(): Class<out TokenRefreshApi<*, *>>
 
-    fun getErrorCodeProvider(): ErrorCodeProvider = object : ErrorCodeProvider {}
 }

@@ -5,7 +5,6 @@ import com.appmattus.certificatetransparency.certificateTransparencyInterceptor
 import com.appmattus.certificatetransparency.loglist.LogListDataSourceFactory
 import com.indiedev.networking.api.GatewaysBaseUrls
 import com.indiedev.networking.api.CertTransparencyFlagProvider
-import com.indiedev.networking.api.ErrorCodeProvider
 import com.indiedev.networking.api.SessionManager
 import com.indiedev.networking.authenticator.AccessTokenAuthenticator
 import com.indiedev.networking.interceptor.ApiFailureInterceptor
@@ -17,12 +16,13 @@ import com.indiedev.networking.qualifiers.IdentityGateway
 import com.indiedev.networking.qualifiers.MainGateway
 import com.indiedev.networking.qualifiers.SecureGateway
 import com.indiedev.networking.token.AuthTokenProvider
-import com.indiedev.networking.token.TokenRefreshProvider
 import com.indiedev.networking.utils.AppVersionDetailsProviderImp
 import com.indiedev.networking.event.EventsHelper
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.indiedev.networking.BuildConfig
 import com.indiedev.networking.FlipperInterceptorFactory
+import com.indiedev.networking.api.NetworkExternalDependencies
+import com.indiedev.networking.api.TokenRefreshApi
 import kotlinx.serialization.json.Json
 import dagger.Module
 import dagger.Provides
@@ -103,13 +103,12 @@ object NetworkModule {
     @Singleton
     @Provides
     internal fun provideAuthenticator(
-        tokenRefreshProvider: TokenRefreshProvider?,
-        sessionManager: SessionManager,
+        tokenRefreshApi: TokenRefreshApi<Any, Any>?,
+        sessionManager: SessionManager<Any, Any>,
         eventsHelper: EventsHelper,
-        errorCodeProvider: ErrorCodeProvider,
     ): Authenticator {
-        return if (tokenRefreshProvider != null) {
-            AccessTokenAuthenticator(tokenRefreshProvider, sessionManager, eventsHelper, errorCodeProvider)
+        return if (tokenRefreshApi != null) {
+            AccessTokenAuthenticator(tokenRefreshApi, sessionManager, eventsHelper)
         } else {
             Authenticator.NONE
         }
@@ -181,7 +180,7 @@ object NetworkModule {
 
     @Provides
     internal fun provideBackendInterceptor(
-        sessionManager: SessionManager,
+        sessionManager: SessionManager<Any, Any>,
         appVersionDetailsProvider: AppVersionDetailsProviderImp,
     ): HeadersInterceptor {
         return HeadersInterceptor(
@@ -194,6 +193,25 @@ object NetworkModule {
         )
     }
 
+    @Singleton
+    @Provides
+    internal fun provideTokenRefreshApi(
+        @ApplicationContext context: Context,
+        networkExternalDependencies: NetworkExternalDependencies,
+        gatewaysBaseUrls: GatewaysBaseUrls,
+        json: Json,
+    ): TokenRefreshApi<*, *>? {
+        val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
+        if (authUrl.isBlank()) {
+            return null
+        }
+        return Retrofit.Builder()
+            .baseUrl(authUrl)
+            .client(getRetrofitClient(context))
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(networkExternalDependencies.getTokenRefreshApiClass())
+    }
 
     private fun getRetrofitClient(
         context: Context,
