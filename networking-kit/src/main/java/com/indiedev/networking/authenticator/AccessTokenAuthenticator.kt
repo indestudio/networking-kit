@@ -15,15 +15,13 @@ import kotlinx.coroutines.sync.withLock
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.ResponseBody
 import okhttp3.Route
-import org.json.JSONObject
 import retrofit2.HttpException
 import java.util.concurrent.atomic.AtomicInteger
 
-internal class AccessTokenAuthenticator<P, R>(
-    private val tokenRefreshApi: TokenRefreshApi<P, R>,
-    private val sessionManager: SessionManager<P, R>,
+internal class AccessTokenAuthenticator(
+    private val tokenRefreshApi: TokenRefreshApi<*, *>,
+    private val sessionManager: SessionManager<*, *>,
     private val eventsHelper: EventsHelper,
 ) : Authenticator {
 
@@ -68,9 +66,10 @@ internal class AccessTokenAuthenticator<P, R>(
 
         repeat(3) {
             when (
-                val tokenResponse: Result<R> = safeApiCall {
+                val tokenResponse: Result<*> = safeApiCall {
                     val request = sessionManager.createRefreshRequest()
-                    tokenRefreshApi.renewAccessToken(request)
+                    @Suppress("UNCHECKED_CAST")
+                     (tokenRefreshApi as TokenRefreshApi<Any?, Any?>).renewAccessToken(request)
                 }
             ) {
                 is Result.Success -> {
@@ -125,11 +124,12 @@ internal class AccessTokenAuthenticator<P, R>(
     }
 
     private fun handleSuccess(
-        tokenResponse: Result<R>,
+        tokenResponse: Result<*>,
         response: Response,
     ): Request {
         tokenResponse.data?.let {
-            sessionManager.onTokenRefreshed(it)
+            @Suppress("UNCHECKED_CAST")
+            (sessionManager as SessionManager<Any?, Any?>).onTokenRefreshed(it)
         }
 
         return newRequestWithAccessToken(

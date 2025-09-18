@@ -23,6 +23,7 @@ import com.indiedev.networking.BuildConfig
 import com.indiedev.networking.FlipperInterceptorFactory
 import com.indiedev.networking.api.NetworkExternalDependencies
 import com.indiedev.networking.api.TokenRefreshApi
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import dagger.Module
 import dagger.Provides
@@ -32,11 +33,10 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.Authenticator
 import okhttp3.Cache
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import okhttp3.MediaType.Companion.toMediaType
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
@@ -103,12 +103,17 @@ object NetworkModule {
     @Singleton
     @Provides
     internal fun provideAuthenticator(
-        tokenRefreshApi: TokenRefreshApi<Any, Any>?,
-        sessionManager: SessionManager<Any, Any>,
+        tokenRefreshApi: TokenRefreshApi<*, *>?,
+        sessionManager: SessionManager<*, *>,
         eventsHelper: EventsHelper,
     ): Authenticator {
         return if (tokenRefreshApi != null) {
-            AccessTokenAuthenticator(tokenRefreshApi, sessionManager, eventsHelper)
+            @Suppress("UNCHECKED_CAST")
+            AccessTokenAuthenticator(
+                tokenRefreshApi,
+                sessionManager,
+                eventsHelper
+            )
         } else {
             Authenticator.NONE
         }
@@ -180,7 +185,7 @@ object NetworkModule {
 
     @Provides
     internal fun provideBackendInterceptor(
-        sessionManager: SessionManager<Any, Any>,
+        sessionManager: SessionManager<*, *>,
         appVersionDetailsProvider: AppVersionDetailsProviderImp,
     ): HeadersInterceptor {
         return HeadersInterceptor(
@@ -205,12 +210,12 @@ object NetworkModule {
         if (authUrl.isBlank()) {
             return null
         }
-        return Retrofit.Builder()
+        val retrofit=  Retrofit.Builder()
             .baseUrl(authUrl)
             .client(getRetrofitClient(context))
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
-            .create(networkExternalDependencies.getTokenRefreshApiClass())
+        return networkExternalDependencies.getTokenRefreshApi(retrofit)
     }
 
     private fun getRetrofitClient(
