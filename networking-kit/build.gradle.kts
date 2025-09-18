@@ -3,8 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt.android)
-    alias(libs.plugins.kapt)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.kapt)  // ✅ For Data Binding if needed
+    alias(libs.plugins.ksp)   // ✅ For Hilt
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
 }
@@ -43,6 +43,12 @@ android {
 }
 
 dependencies {
+
+    api (libs.moshi.kotlin)
+    api (libs.moshi)
+    ksp (libs.moshi.kotlincodegen )
+    api (libs.retrofit.moshi.converter)
+
     implementation(libs.retrofit) {
         exclude(group = "com.squareup.okhttp3", module = "library")
     }
@@ -62,7 +68,7 @@ dependencies {
     releaseImplementation(libs.flipper.noop)
 
     implementation(libs.hilt.android.core)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
 
     implementation(libs.coroutines.core)
     implementation(libs.android.core.ktx)
@@ -70,6 +76,8 @@ dependencies {
     implementation(libs.json.simple) {
         exclude(group = "org.hamcrest", module = "hamcrest-core")
     }
+
+
 
     testImplementation("io.mockk:mockk:1.13.17")
     testImplementation(libs.bundles.mockito)

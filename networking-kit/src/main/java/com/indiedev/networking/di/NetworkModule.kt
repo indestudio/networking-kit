@@ -21,6 +21,8 @@ import com.indiedev.networking.event.EventsHelper
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.indiedev.networking.BuildConfig
 import com.indiedev.networking.FlipperInterceptorFactory
+import com.indiedev.networking.adapters.FallbackEnum
+import com.indiedev.networking.adapters.MoshiArrayListJsonAdapter
 import com.indiedev.networking.api.NetworkExternalDependencies
 import com.indiedev.networking.api.TokenRefreshApi
 import kotlinx.serialization.json.Json
@@ -36,7 +38,10 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.MediaType.Companion.toMediaType
+import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
@@ -56,6 +61,15 @@ object NetworkModule {
             ignoreUnknownKeys = true
             isLenient = true
         }
+    }
+
+    @Provides
+    internal fun provideMoshi(): Moshi {
+        return Moshi.Builder()
+            .add(FallbackEnum.ADAPTER_FACTORY)
+            .add(KotlinJsonAdapterFactory())
+            .add(MoshiArrayListJsonAdapter.FACTORY)
+            .build()
     }
 
     @Singleton
@@ -103,12 +117,17 @@ object NetworkModule {
     @Singleton
     @Provides
     internal fun provideAuthenticator(
-        tokenRefreshApi: TokenRefreshApi<Any, Any>?,
-        sessionManager: SessionManager<Any, Any>,
+        tokenRefreshApi: TokenRefreshApi<*, *>?,
+        sessionManager: SessionManager<*, *>,
         eventsHelper: EventsHelper,
     ): Authenticator {
         return if (tokenRefreshApi != null) {
-            AccessTokenAuthenticator(tokenRefreshApi, sessionManager, eventsHelper)
+            @Suppress("UNCHECKED_CAST")
+            AccessTokenAuthenticator(
+                tokenRefreshApi,
+                sessionManager,
+                eventsHelper
+            )
         } else {
             Authenticator.NONE
         }
@@ -131,12 +150,12 @@ object NetworkModule {
     fun provideMainGatewayRetrofit(
         okHttpClient: OkHttpClient,
         gatewaysBaseUrls: GatewaysBaseUrls,
-        json: Json,
+        moshi: Moshi
     ): Retrofit {
         return Retrofit.Builder()
             .baseUrl(gatewaysBaseUrls.getMainGatewayUrl())
             .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
     }
 
@@ -146,7 +165,7 @@ object NetworkModule {
     fun provideSecureGatewayRetrofit(
         okHttpClient: OkHttpClient,
         gatewaysBaseUrls: GatewaysBaseUrls,
-        json: Json,
+        moshi: Moshi
     ): Retrofit? {
         val secureUrl = gatewaysBaseUrls.getSecureGatewayUrl()
         if (secureUrl.isBlank()) {
@@ -155,7 +174,7 @@ object NetworkModule {
         return Retrofit.Builder()
             .baseUrl(secureUrl)
             .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
     }
 
@@ -165,7 +184,7 @@ object NetworkModule {
     fun provideAuthGatewayRetrofit(
         okHttpClient: OkHttpClient,
         gatewaysBaseUrls: GatewaysBaseUrls,
-        json: Json,
+        moshi: Moshi
     ): Retrofit? {
         val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
         if (authUrl.isBlank()) {
@@ -174,13 +193,13 @@ object NetworkModule {
         return Retrofit.Builder()
             .baseUrl(authUrl)
             .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
     }
 
     @Provides
     internal fun provideBackendInterceptor(
-        sessionManager: SessionManager<Any, Any>,
+        sessionManager: SessionManager<*, *>,
         appVersionDetailsProvider: AppVersionDetailsProviderImp,
     ): HeadersInterceptor {
         return HeadersInterceptor(
@@ -199,18 +218,18 @@ object NetworkModule {
         @ApplicationContext context: Context,
         networkExternalDependencies: NetworkExternalDependencies,
         gatewaysBaseUrls: GatewaysBaseUrls,
-        json: Json,
+        moshi: Moshi
     ): TokenRefreshApi<*, *>? {
         val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
         if (authUrl.isBlank()) {
             return null
         }
-        return Retrofit.Builder()
+        val retrofit=  Retrofit.Builder()
             .baseUrl(authUrl)
             .client(getRetrofitClient(context))
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
-            .create(networkExternalDependencies.getTokenRefreshApiClass())
+        return networkExternalDependencies.getTokenRefreshApi(retrofit)
     }
 
     private fun getRetrofitClient(

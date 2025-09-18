@@ -12,7 +12,7 @@ coroutines = "1.4.2"
 detektPlugin = "1.23.7"
 espressoCore = "3.3.0"
 flipper = "0.187.1"
-hilt = "2.49"
+hilt = "2.57"
 json = "20210307"
 jsonSimple = "1.1.1"
 junit = "4.12"
@@ -35,6 +35,10 @@ turbine = "0.9.0"
 
 coreKtx = "1.16.0"
 junitVersion = "1.2.1"
+
+moshiKotlin = "1.13.0"
+moshiKotlinCodegen = "1.13.0"
+retrofitMoshiConverter = "2.5.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -83,6 +87,10 @@ retrofit-kotlinx-serialization-converter = {group = "com.jakewharton.retrofit", 
 retrofit-mock = {group = "com.squareup.retrofit2", name = "retrofit-mock", version.ref = "retrofit" }
 soLoader = {group = "com.facebook.soloader", name = "soloader", version.ref = "soLoader" }
 turbine = {group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+moshi = {group = "com.squareup.moshi", name = "moshi", version.ref = "moshiKotlin" }
+moshi-kotlin = {group = "com.squareup.moshi", name = "moshi-kotlin", version.ref = "moshiKotlin" }
+moshi-kotlincodegen = {group = "com.squareup.moshi", name = "moshi-kotlin-codegen", version.ref = "moshiKotlinCodegen" }
+retrofit-moshi-converter = {group = "com.squareup.retrofit2", name = "converter-moshi", version.ref = "retrofitMoshiConverter" }
 
 
 [bundles]

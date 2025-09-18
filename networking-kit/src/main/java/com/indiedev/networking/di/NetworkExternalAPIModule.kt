@@ -9,11 +9,13 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import retrofit2.Retrofit
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 class NetworkExternalAPIModule {
 
+    @Singleton
     @Provides
     fun provideExternalAPI(
         @MainGateway retrofitMain: Retrofit,
@@ -26,7 +28,7 @@ class NetworkExternalAPIModule {
             }
 
             override fun <T> createServiceOnSecureGateway(type: Class<T>): T {
-                return retrofitSecure?.create(type) 
+                return retrofitSecure?.create(type)
                     ?: throw IllegalStateException("Secure gateway URL is not configured")
             }
 
