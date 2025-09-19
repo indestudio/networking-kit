@@ -37,6 +37,6 @@ interface NetworkExternalDependencies {
         }
     }
 
-    fun getTokenRefreshApi(retrofit: Retrofit): TokenRefreshApi<*, *>
+    fun getTokenRefreshApi(retrofit: Retrofit): TokenRefreshApi<*, *>? = null
 
 }
