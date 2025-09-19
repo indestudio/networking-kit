@@ -10,7 +10,7 @@ interface SessionManager<P, R> {
     
     fun getSessionData(): Map<String, String>
 
-    fun createRefreshRequest(): P
+    fun getRefreshTokenRequest(): P
 
     fun onTokenRefreshed(response: R)
 

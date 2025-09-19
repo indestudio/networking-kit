@@ -16,7 +16,7 @@ interface NetworkExternalDependencies {
         override fun getRefreshToken(): String = ""
         override fun getUsername(): String = ""
         override fun getSessionData(): Map<String, String> = emptyMap()
-        override fun createRefreshRequest(): Unit = throw NotImplementedError("Must be implemented by container app")
+        override fun getRefreshTokenRequest(): Unit = throw NotImplementedError("Must be implemented by container app")
         override fun onTokenRefreshed(response: Unit) {}
         override fun onTokenExpires() {}
     }

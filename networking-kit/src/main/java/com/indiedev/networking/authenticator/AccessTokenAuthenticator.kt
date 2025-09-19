@@ -67,7 +67,7 @@ internal class AccessTokenAuthenticator(
         repeat(3) {
             when (
                 val tokenResponse: Result<*> = safeApiCall {
-                    val request = sessionManager.createRefreshRequest()
+                    val request = sessionManager.getRefreshTokenRequest()
                     @Suppress("UNCHECKED_CAST")
                      (tokenRefreshApi as TokenRefreshApi<Any?, Any?>).renewAccessToken(request)
                 }
