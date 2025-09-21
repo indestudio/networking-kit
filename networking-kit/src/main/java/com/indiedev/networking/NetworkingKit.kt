@@ -330,17 +330,11 @@ class NetworkingKit private constructor(
 
                 builder.addInterceptor(ChuckerInterceptor.Builder(context).build())
 
-                // Add Flipper and Mock interceptors if available (debug build only)
-                try {
-                    val flipperFactoryClass = Class.forName("com.indiedev.networking.FlipperInterceptorFactory")
-                    val createInterceptorMethod = flipperFactoryClass.getMethod("createInterceptor", Context::class.java)
-                    val flipperInterceptor = createInterceptorMethod.invoke(null, context) as? okhttp3.Interceptor
-                    flipperInterceptor?.let {
-                        builder.addNetworkInterceptor(it)
-                        builder.addNetworkInterceptor(MockInterceptor(context))
-                    }
-                } catch (e: Exception) {
-                    // Flipper not available, skip
+                // Add Flipper and Mock interceptors (debug build only)
+                val flipperInterceptor = FlipperInterceptorFactory.createInterceptor(context)
+                flipperInterceptor?.let {
+                    builder.addNetworkInterceptor(it)
+                    builder.addNetworkInterceptor(MockInterceptor(context))
                 }
             }
 
