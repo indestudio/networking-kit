@@ -1,4 +1,4 @@
-package com.indiedev.networking.interceptor
+package com.indiedev.networking.interceptors
 
 import android.content.Context
 import android.util.Log

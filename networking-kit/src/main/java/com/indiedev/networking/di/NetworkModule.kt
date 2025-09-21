@@ -10,9 +10,9 @@ import com.indiedev.networking.authenticator.AccessTokenAuthenticator
 import com.indiedev.networking.interceptor.ApiFailureInterceptor
 import com.indiedev.networking.interceptor.CacheInterceptor
 import com.indiedev.networking.interceptors.HeadersInterceptor
-import com.indiedev.networking.interceptor.MockInterceptor
-import com.indiedev.networking.interceptor.NoConnectionInterceptor
-import com.indiedev.networking.qualifiers.IdentityGateway
+import com.indiedev.networking.interceptors.MockInterceptor
+import com.indiedev.networking.interceptors.NoConnectionInterceptor
+import com.indiedev.networking.qualifiers.AuthGateway
 import com.indiedev.networking.qualifiers.MainGateway
 import com.indiedev.networking.qualifiers.SecureGateway
 import com.indiedev.networking.token.AuthTokenProvider
@@ -21,6 +21,8 @@ import com.indiedev.networking.event.EventsHelper
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.indiedev.networking.BuildConfig
 import com.indiedev.networking.FlipperInterceptorFactory
+import com.indiedev.networking.qualifiers.AuthHttpClient
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import dagger.Module
 import dagger.Provides
@@ -33,7 +35,6 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import okhttp3.MediaType.Companion.toMediaType
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
@@ -74,18 +75,20 @@ object NetworkModule {
             .addInterceptor(httpLoggingInterceptor)
             .addInterceptor(noConnectionInterceptor)
             .addInterceptor(backendInterceptor)
-            .addInterceptor(ChuckerInterceptor.Builder(context).build())
             .addInterceptor(apiFailureInterceptor)
             .authenticator(authenticator)
             .cache(createCache(context))
             .addNetworkInterceptor(certInterceptor)
             .apply {
                 if (BuildConfig.DEBUG) {
+                    addInterceptor(ChuckerInterceptor.Builder(context).build())
+
                     val flipperInterceptor = FlipperInterceptorFactory.createInterceptor(context)
                     flipperInterceptor?.let {
                         addNetworkInterceptor(it)
                         addNetworkInterceptor(MockInterceptor(context))
                     }
+
                 }
 
                 addNetworkInterceptor(CacheInterceptor())
@@ -103,7 +106,7 @@ object NetworkModule {
     internal fun provideAuthenticator(
         sessionManager: SessionManager,
         eventsHelper: EventsHelper,
-        @IdentityGateway retrofit: Retrofit?,
+        @AuthGateway retrofit: Retrofit?,
     ): Authenticator {
         return if (retrofit != null && sessionManager.getTokenRefreshConfig<Any, Any>() != null) {
             AccessTokenAuthenticator(
@@ -162,12 +165,12 @@ object NetworkModule {
     }
 
     @Singleton
-    @IdentityGateway
+    @AuthGateway
     @Provides
     fun provideAuthGatewayRetrofit(
-        @ApplicationContext context: Context,
         gatewaysBaseUrls: GatewaysBaseUrls,
-        json: Json,
+        @AuthHttpClient okHttpClient: OkHttpClient,
+       json: Json
     ): Retrofit? {
         val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
         if (authUrl.isBlank()) {
@@ -175,7 +178,7 @@ object NetworkModule {
         }
         return Retrofit.Builder()
             .baseUrl(authUrl)
-            .client(getRetrofitClient(context))
+            .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }
@@ -197,23 +200,29 @@ object NetworkModule {
 
     // TokenRefreshApi is now created dynamically by AccessTokenAuthenticator
     // No longer needed as a singleton dependency
-// Todo: add certificate and other interceptors
-    private fun getRetrofitClient(
-        context: Context,
+    @AuthHttpClient
+    @Singleton
+    @Provides
+    internal fun provideIdentityHttpClient(
+        @ApplicationContext context: Context,
+        httpLoggingInterceptor: HttpLoggingInterceptor,
+        noConnectionInterceptor: NoConnectionInterceptor,
     ): OkHttpClient {
         return OkHttpClient.Builder()
-            .also { client ->
+            .writeTimeout(EXTENDED_WRITE_TIMEOUT, TimeUnit.SECONDS)
+            .readTimeout(EXTENDED_READ_TIMEOUT, TimeUnit.SECONDS)
+            .addInterceptor(httpLoggingInterceptor)
+            .addInterceptor(noConnectionInterceptor)
+            .apply {
                 if (BuildConfig.DEBUG) {
-                    val logging = HttpLoggingInterceptor()
-                    logging.setLevel(HttpLoggingInterceptor.Level.BODY)
+                    addInterceptor(ChuckerInterceptor.Builder(context).build())
 
                     val flipperInterceptor = FlipperInterceptorFactory.createInterceptor(context)
-
-                    client.addInterceptor(logging).apply {
-                        flipperInterceptor?.let {
-                            addNetworkInterceptor(it)
-                        }
+                    flipperInterceptor?.let {
+                        addNetworkInterceptor(it)
+                        addNetworkInterceptor(MockInterceptor(context))
                     }
+
                 }
             }.build()
     }

@@ -14,7 +14,6 @@ internal class HeadersInterceptor constructor(
         return chain.proceed(
             chain.request().newBuilder()
                 .header(AUTHORIZATION, "$BEARER ${tokenProvider.getAuthToken()}")
-                .header(APP_VERSION, versionDetailsProvider.getAppVersionCode())
                 .header(APP_VERSION_NAME, versionDetailsProvider.getAppVersionName() )
                 .header(APP_VERSION_CODE, versionDetailsProvider.getAppVersionCode())
                 .build(),
@@ -23,7 +22,6 @@ internal class HeadersInterceptor constructor(
 
     companion object {
         const val AUTHORIZATION = "Authorization"
-        const val APP_VERSION = "AppVersion"
         const val APP_VERSION_NAME = "AppVersionName"
         const val APP_VERSION_CODE = "AppVersionCode"
         const val BEARER = "Bearer"

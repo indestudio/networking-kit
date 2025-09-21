@@ -12,4 +12,10 @@ internal annotation class SecureGateway
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-internal annotation class IdentityGateway
+internal annotation class AuthGateway
+
+
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+internal annotation class AuthHttpClient
