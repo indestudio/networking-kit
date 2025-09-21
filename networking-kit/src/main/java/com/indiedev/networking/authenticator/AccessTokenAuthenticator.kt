@@ -1,7 +1,7 @@
 package com.indiedev.networking.authenticator
 
 import com.indiedev.networking.api.SessionManager
-import com.indiedev.networking.api.TokenRefreshApi
+import com.indiedev.networking.api.TokenRefreshConfig
 import com.indiedev.networking.common.EMPTY_STRING
 import com.indiedev.networking.common.PREFIX_AUTH_TOKEN
 import com.indiedev.networking.event.EventsHelper
@@ -19,16 +19,26 @@ import okhttp3.Route
 import retrofit2.HttpException
 import java.util.concurrent.atomic.AtomicInteger
 
+import java.lang.reflect.Method
+import kotlin.coroutines.intrinsics.*
+
 internal class AccessTokenAuthenticator(
-    private val tokenRefreshApi: TokenRefreshApi<*, *>,
-    private val sessionManager: SessionManager<*, *>,
+    private val sessionManager: SessionManager,
     private val eventsHelper: EventsHelper,
+    private val retrofit: retrofit2.Retrofit,
 ) : Authenticator {
 
     private val mutex = Mutex()
 
     @Volatile private var shouldAbort = false
     private val waitingCount = AtomicInteger(0)
+    
+    private val tokenRefreshService: Any? by lazy {
+        val config = sessionManager.getTokenRefreshConfig<Any, Any>()
+        config?.let {
+            retrofit.create(it.getServiceClass())
+        }
+    }
 
     override fun authenticate(route: Route?, response: Response): Request? {
         if (!isRequestWithAccessToken(response)) return null
@@ -62,25 +72,68 @@ internal class AccessTokenAuthenticator(
     }
 
     private suspend fun refreshTokenOrAbort(response: Response): Request? {
-        // Need to refresh an access token
+        val config = sessionManager.getTokenRefreshConfig<Any, Any>()
+        if (config == null) {
+            eventsHelper.logEvent(EventsNames.EVENT_REFRESHING_AUTH_TOKEN_FAILED)
+            shouldAbort = waitingCount.get() > 1
+            return null
+        }
 
-        repeat(3) {
+        val service = tokenRefreshService
+        if (service == null) {
+            eventsHelper.logEvent(EventsNames.EVENT_REFRESHING_AUTH_TOKEN_FAILED)
+            shouldAbort = waitingCount.get() > 1
+            return null
+        }
+
+        repeat(config.getRetryCount()) {
             when (
                 val tokenResponse: Result<*> = safeApiCall {
-                    val request = sessionManager.getRefreshTokenRequest()
-                    @Suppress("UNCHECKED_CAST")
-                     (tokenRefreshApi as TokenRefreshApi<Any?, Any?>).renewAccessToken(request)
+                    val request = config.createRefreshRequest()
+                    
+                    // Filter out standard Object methods to find the token refresh method
+                    val refreshMethods = service.javaClass.declaredMethods.filter { method ->
+                        method.name !in setOf("equals", "hashCode", "toString")
+                    }
+
+                    // Validate exactly one refresh method exists
+                    if (refreshMethods.size != 1) {
+                        throw IllegalArgumentException(
+                            "Token refresh service must have exactly one refresh method, but found ${refreshMethods.size}"
+                        )
+                    }
+
+                    val renewMethod = refreshMethods.first()
+
+                    // Validate method has correct parameter count
+                    if (renewMethod.parameterCount != 2) {
+                        throw IllegalArgumentException(
+                            "Token refresh method must have exactly 2 parameters, but found ${renewMethod.parameterCount}"
+                        )
+                    }
+
+                    // Validate method has proper return type
+                    val invalidReturnTypes = setOf(Void.TYPE, Unit::class.java, Nothing::class.java)
+                    if (renewMethod.returnType in invalidReturnTypes) {
+                        throw IllegalArgumentException(
+                            "Token refresh method must return a value, not void, Unit, or Nothing"
+                        )
+                    }
+
+                    // Invoke the refresh method
+                    renewMethod.invokeSuspend(service, request)
+                        ?: throw IllegalStateException("Token refresh method returned null")
                 }
             ) {
                 is Result.Success -> {
-                    return handleSuccess(tokenResponse, response)
+                    return handleSuccess(tokenResponse, response, config)
                 }
 
                 else -> {
                     val error = tokenResponse as Result.Error
 
                     if (shouldAbortDueToHttpException(error.exception)) {
-                        if (tokenRefreshApi.isRefreshTokenExpiredError(error.exception)) {
+                        if (config.isRefreshTokenExpired(error.exception as HttpException)) {
                             eventsHelper.logEvent(EventsNames.EVENT_REFRESH_TOKEN_NOT_VALID)
                             sessionManager.onTokenExpires()
                         }
@@ -126,10 +179,11 @@ internal class AccessTokenAuthenticator(
     private fun handleSuccess(
         tokenResponse: Result<*>,
         response: Response,
+        config: TokenRefreshConfig<Any, Any>
     ): Request {
-        tokenResponse.data?.let {
-            @Suppress("UNCHECKED_CAST")
-            (sessionManager as SessionManager<Any?, Any?>).onTokenRefreshed(it)
+        tokenResponse.data?.let { responseData ->
+            val tokens = config.extractTokens(responseData)
+            sessionManager.onTokenRefreshed(tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
         }
 
         return newRequestWithAccessToken(
@@ -154,3 +208,8 @@ internal class AccessTokenAuthenticator(
     }
 }
 
+
+suspend fun Method.invokeSuspend(obj: Any, vararg args: Any?): Any? =
+    suspendCoroutineUninterceptedOrReturn { cont ->
+        invoke(obj, *args, cont)
+    }

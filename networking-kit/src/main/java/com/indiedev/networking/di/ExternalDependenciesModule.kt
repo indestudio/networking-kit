@@ -6,7 +6,6 @@ import com.indiedev.networking.api.NetworkApiExceptionLogger
 import com.indiedev.networking.api.NetworkEventLogger
 import com.indiedev.networking.api.NetworkExternalDependencies
 import com.indiedev.networking.api.SessionManager
-import com.indiedev.networking.api.TokenRefreshApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -40,8 +39,9 @@ class ExternalDependenciesModule {
         dependencies.getCertTransparencyFlagProvider()
 
     @Provides
-    internal fun provideSessionManager(dependencies: NetworkExternalDependencies): SessionManager<*, *> =
-        dependencies.getSessionManager()
+    internal fun provideSessionManager(dependencies: NetworkExternalDependencies): SessionManager {
+        return dependencies.getSessionManager()
+    }
 
 
 }

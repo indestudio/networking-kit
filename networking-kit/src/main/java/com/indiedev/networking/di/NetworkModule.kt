@@ -24,7 +24,6 @@ import com.indiedev.networking.FlipperInterceptorFactory
 import com.indiedev.networking.adapters.FallbackEnum
 import com.indiedev.networking.adapters.MoshiArrayListJsonAdapter
 import com.indiedev.networking.api.NetworkExternalDependencies
-import com.indiedev.networking.api.TokenRefreshApi
 import kotlinx.serialization.json.Json
 import dagger.Module
 import dagger.Provides
@@ -117,16 +116,15 @@ object NetworkModule {
     @Singleton
     @Provides
     internal fun provideAuthenticator(
-        tokenRefreshApi: TokenRefreshApi<*, *>?,
-        sessionManager: SessionManager<*, *>,
+        sessionManager: SessionManager,
         eventsHelper: EventsHelper,
+        @IdentityGateway retrofit: Retrofit?,
     ): Authenticator {
-        return if (tokenRefreshApi != null) {
-            @Suppress("UNCHECKED_CAST")
+        return if (retrofit != null && sessionManager.getTokenRefreshConfig<Any, Any>() != null) {
             AccessTokenAuthenticator(
-                tokenRefreshApi,
                 sessionManager,
-                eventsHelper
+                eventsHelper,
+                retrofit
             )
         } else {
             Authenticator.NONE
@@ -182,7 +180,7 @@ object NetworkModule {
     @IdentityGateway
     @Provides
     fun provideAuthGatewayRetrofit(
-        okHttpClient: OkHttpClient,
+        @ApplicationContext context: Context,
         gatewaysBaseUrls: GatewaysBaseUrls,
         moshi: Moshi
     ): Retrofit? {
@@ -192,14 +190,14 @@ object NetworkModule {
         }
         return Retrofit.Builder()
             .baseUrl(authUrl)
-            .client(okHttpClient)
+            .client(getRetrofitClient(context))
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
     }
 
     @Provides
     internal fun provideBackendInterceptor(
-        sessionManager: SessionManager<*, *>,
+        sessionManager: SessionManager,
         appVersionDetailsProvider: AppVersionDetailsProviderImp,
     ): HeadersInterceptor {
         return HeadersInterceptor(
@@ -212,26 +210,9 @@ object NetworkModule {
         )
     }
 
-    @Singleton
-    @Provides
-    internal fun provideTokenRefreshApi(
-        @ApplicationContext context: Context,
-        networkExternalDependencies: NetworkExternalDependencies,
-        gatewaysBaseUrls: GatewaysBaseUrls,
-        moshi: Moshi
-    ): TokenRefreshApi<*, *>? {
-        val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
-        if (authUrl.isBlank()) {
-            return null
-        }
-        val retrofit=  Retrofit.Builder()
-            .baseUrl(authUrl)
-            .client(getRetrofitClient(context))
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-        return networkExternalDependencies.getTokenRefreshApi(retrofit)
-    }
-
+    // TokenRefreshApi is now created dynamically by AccessTokenAuthenticator
+    // No longer needed as a singleton dependency
+// Todo: add certificate and other interceptors
     private fun getRetrofitClient(
         context: Context,
     ): OkHttpClient {
