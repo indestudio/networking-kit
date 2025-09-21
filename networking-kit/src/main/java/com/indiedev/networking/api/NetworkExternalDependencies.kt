@@ -32,7 +32,7 @@ interface NetworkExternalDependencies {
         override fun onTokenExpires() {
         }
 
-        override fun <REQUEST, RESPONSE> getTokenRefreshConfig(): TokenRefreshConfig<REQUEST, RESPONSE>? {
+        override fun  getTokenRefreshConfig(): TokenRefreshConfig<*, *>? {
             return null
         }
 
