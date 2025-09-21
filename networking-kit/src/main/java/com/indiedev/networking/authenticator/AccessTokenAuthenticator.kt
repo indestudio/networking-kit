@@ -25,7 +25,7 @@ import kotlin.coroutines.intrinsics.*
 internal class AccessTokenAuthenticator(
     private val sessionManager: SessionManager,
     private val eventsHelper: EventsHelper,
-    private val retrofit: retrofit2.Retrofit,
+    private val retrofitLazy: Lazy<retrofit2.Retrofit>,
 ) : Authenticator {
 
     private val mutex = Mutex()
@@ -36,7 +36,7 @@ internal class AccessTokenAuthenticator(
     private val tokenRefreshService: Any? by lazy {
         val config = sessionManager.getTokenRefreshConfig()
         config?.let {
-            retrofit.create(it.getServiceClass())
+            retrofitLazy.value.create(it.getServiceClass())
         }
     }
 

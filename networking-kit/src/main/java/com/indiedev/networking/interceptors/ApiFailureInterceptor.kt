@@ -1,4 +1,4 @@
-package com.indiedev.networking.interceptor
+package com.indiedev.networking.interceptors
 
 import com.indiedev.networking.api.NetworkApiExceptionLogger
 import com.indiedev.networking.event.EventsProperties
