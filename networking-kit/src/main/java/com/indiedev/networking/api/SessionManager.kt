@@ -1,18 +1,13 @@
 package com.indiedev.networking.api
 
-interface SessionManager<P, R> {
+interface SessionManager {
 
     fun getAuthToken(): String
 
-    fun getRefreshToken(): String
-
-    fun getUsername(): String
-    
-    fun getSessionData(): Map<String, String>
-
-    fun createRefreshRequest(): P
-
-    fun onTokenRefreshed(response: R)
+    fun onTokenRefreshed(accessToken: String, refreshToken: String, expiresIn: Long =0)
 
     fun onTokenExpires()
+    
+    // New method for token refresh configuration
+    fun <REQUEST, RESPONSE> getTokenRefreshConfig(): TokenRefreshConfig<REQUEST, RESPONSE>?
 }

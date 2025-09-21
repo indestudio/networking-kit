@@ -21,9 +21,6 @@ import com.indiedev.networking.event.EventsHelper
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.indiedev.networking.BuildConfig
 import com.indiedev.networking.FlipperInterceptorFactory
-import com.indiedev.networking.api.NetworkExternalDependencies
-import com.indiedev.networking.api.TokenRefreshApi
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import dagger.Module
 import dagger.Provides
@@ -33,10 +30,11 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.Authenticator
 import okhttp3.Cache
 import okhttp3.Interceptor
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import okhttp3.MediaType.Companion.toMediaType
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
@@ -103,16 +101,15 @@ object NetworkModule {
     @Singleton
     @Provides
     internal fun provideAuthenticator(
-        tokenRefreshApi: TokenRefreshApi<*, *>?,
-        sessionManager: SessionManager<*, *>,
+        sessionManager: SessionManager,
         eventsHelper: EventsHelper,
+        @IdentityGateway retrofit: Retrofit?,
     ): Authenticator {
-        return if (tokenRefreshApi != null) {
-            @Suppress("UNCHECKED_CAST")
+        return if (retrofit != null && sessionManager.getTokenRefreshConfig<Any, Any>() != null) {
             AccessTokenAuthenticator(
-                tokenRefreshApi,
                 sessionManager,
-                eventsHelper
+                eventsHelper,
+                retrofit
             )
         } else {
             Authenticator.NONE
@@ -168,7 +165,7 @@ object NetworkModule {
     @IdentityGateway
     @Provides
     fun provideAuthGatewayRetrofit(
-        okHttpClient: OkHttpClient,
+        @ApplicationContext context: Context,
         gatewaysBaseUrls: GatewaysBaseUrls,
         json: Json,
     ): Retrofit? {
@@ -178,14 +175,14 @@ object NetworkModule {
         }
         return Retrofit.Builder()
             .baseUrl(authUrl)
-            .client(okHttpClient)
+            .client(getRetrofitClient(context))
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }
 
     @Provides
     internal fun provideBackendInterceptor(
-        sessionManager: SessionManager<*, *>,
+        sessionManager: SessionManager,
         appVersionDetailsProvider: AppVersionDetailsProviderImp,
     ): HeadersInterceptor {
         return HeadersInterceptor(
@@ -198,26 +195,9 @@ object NetworkModule {
         )
     }
 
-    @Singleton
-    @Provides
-    internal fun provideTokenRefreshApi(
-        @ApplicationContext context: Context,
-        networkExternalDependencies: NetworkExternalDependencies,
-        gatewaysBaseUrls: GatewaysBaseUrls,
-        json: Json,
-    ): TokenRefreshApi<*, *>? {
-        val authUrl = gatewaysBaseUrls.getAuthGatewayUrl()
-        if (authUrl.isBlank()) {
-            return null
-        }
-        val retrofit=  Retrofit.Builder()
-            .baseUrl(authUrl)
-            .client(getRetrofitClient(context))
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-        return networkExternalDependencies.getTokenRefreshApi(retrofit)
-    }
-
+    // TokenRefreshApi is now created dynamically by AccessTokenAuthenticator
+    // No longer needed as a singleton dependency
+// Todo: add certificate and other interceptors
     private fun getRetrofitClient(
         context: Context,
     ): OkHttpClient {
