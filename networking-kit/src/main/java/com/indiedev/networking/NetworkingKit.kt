@@ -16,6 +16,7 @@ import com.indiedev.networking.token.AuthTokenProvider
 import com.indiedev.networking.utils.AppVersionDetailsProviderImp
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
+import okhttp3.Authenticator
 import okhttp3.Cache
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -26,24 +27,24 @@ import java.util.concurrent.TimeUnit
 
 
 class NetworkingKit private constructor(
-    private val mainGatewayRetrofit: Retrofit,
-    private val secureGatewayRetrofit: Retrofit,
-    private val authGatewayRetrofit: Retrofit
+    private val mainGatewayRetrofit: Retrofit?,
+    private val secureGatewayRetrofit: Retrofit?,
+    private val authGatewayRetrofit: Retrofit?
 ) {
 
 
     fun <T> createMainService(serviceClass: Class<T>): T {
-        return mainGatewayRetrofit.create(serviceClass)
+        return mainGatewayRetrofit?.create(serviceClass) ?: throw IllegalStateException("Main Gateway is not initialized.")
     }
 
 
     fun <T> createSecureService(serviceClass: Class<T>): T {
-        return secureGatewayRetrofit.create(serviceClass)
+        return secureGatewayRetrofit?.create(serviceClass) ?: throw IllegalStateException("Secure Gateway is not initialized.")
     }
 
 
     fun <T> createAuthService(serviceClass: Class<T>): T {
-        return authGatewayRetrofit.create(serviceClass)
+        return authGatewayRetrofit?.create(serviceClass) ?: throw IllegalStateException("Auth Gateway is not initialized.")
     }
 
 
@@ -345,7 +346,10 @@ class NetworkingKit private constructor(
         /**
          * Create Retrofit instance for specific gateway
          */
-        private fun createRetrofit(baseUrl: String, okHttpClient: OkHttpClient): Retrofit {
+        private fun createRetrofit(baseUrl: String, okHttpClient: OkHttpClient): Retrofit? {
+
+            if(baseUrl.isBlank()) return null
+
             val json = Json {
                 ignoreUnknownKeys = true
                 isLenient = true
@@ -364,12 +368,12 @@ class NetworkingKit private constructor(
         private fun createAuthenticator(
             sessionManager: SessionManager,
             eventsHelper: EventsHelper,
-            authRetrofit: Retrofit
-        ): AccessTokenAuthenticator {
-            return if (sessionManager.getTokenRefreshConfig() != null) {
+            authRetrofit: Retrofit?
+        ): Authenticator {
+            return if (authRetrofit != null && sessionManager.getTokenRefreshConfig() != null) {
                 AccessTokenAuthenticator(sessionManager, eventsHelper, lazy { authRetrofit })
             } else {
-                AccessTokenAuthenticator(sessionManager, eventsHelper, lazy { authRetrofit })
+                Authenticator.NONE
             }
         }
         
