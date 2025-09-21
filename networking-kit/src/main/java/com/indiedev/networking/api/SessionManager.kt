@@ -9,5 +9,5 @@ interface SessionManager {
     fun onTokenExpires()
     
     // New method for token refresh configuration
-    fun <REQUEST, RESPONSE> getTokenRefreshConfig(): TokenRefreshConfig<REQUEST, RESPONSE>?
+    fun  getTokenRefreshConfig(): TokenRefreshConfig<*, *>? = null
 }

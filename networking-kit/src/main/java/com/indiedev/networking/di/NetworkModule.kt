@@ -108,7 +108,7 @@ object NetworkModule {
         eventsHelper: EventsHelper,
         @AuthGateway retrofit: Retrofit?,
     ): Authenticator {
-        return if (retrofit != null && sessionManager.getTokenRefreshConfig<Any, Any>() != null) {
+        return if (retrofit != null && sessionManager.getTokenRefreshConfig() != null) {
             AccessTokenAuthenticator(
                 sessionManager,
                 eventsHelper,

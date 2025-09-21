@@ -34,7 +34,7 @@ internal class AccessTokenAuthenticator(
     private val waitingCount = AtomicInteger(0)
     
     private val tokenRefreshService: Any? by lazy {
-        val config = sessionManager.getTokenRefreshConfig<Any, Any>()
+        val config = sessionManager.getTokenRefreshConfig()
         config?.let {
             retrofit.create(it.getServiceClass())
         }
@@ -72,7 +72,7 @@ internal class AccessTokenAuthenticator(
     }
 
     private suspend fun refreshTokenOrAbort(response: Response): Request? {
-        val config = sessionManager.getTokenRefreshConfig<Any, Any>()
+        val config = sessionManager.getTokenRefreshConfig()
         if (config == null) {
             eventsHelper.logEvent(EventsNames.EVENT_REFRESHING_AUTH_TOKEN_FAILED)
             shouldAbort = waitingCount.get() > 1
@@ -126,7 +126,7 @@ internal class AccessTokenAuthenticator(
                 }
             ) {
                 is Result.Success -> {
-                    return handleSuccess(tokenResponse, response, config)
+                    return handleSuccess(tokenResponse, response, config as TokenRefreshConfig<Any, Any>)
                 }
 
                 else -> {
