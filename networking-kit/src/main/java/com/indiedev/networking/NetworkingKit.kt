@@ -4,8 +4,6 @@ import android.content.Context
 import com.appmattus.certificatetransparency.certificateTransparencyInterceptor
 import com.appmattus.certificatetransparency.loglist.LogListDataSourceFactory
 import com.chuckerteam.chucker.api.ChuckerInterceptor
-import com.indiedev.networking.adapters.FallbackEnum
-import com.indiedev.networking.adapters.MoshiArrayListJsonAdapter
 import com.indiedev.networking.api.*
 import com.indiedev.networking.authenticator.AccessTokenAuthenticator
 import com.indiedev.networking.event.EventsHelper
@@ -16,13 +14,13 @@ import com.indiedev.networking.interceptors.MockInterceptor
 import com.indiedev.networking.interceptors.NoConnectionInterceptor
 import com.indiedev.networking.token.AuthTokenProvider
 import com.indiedev.networking.utils.AppVersionDetailsProviderImp
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import kotlinx.serialization.json.Json
 import okhttp3.Cache
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -354,16 +352,15 @@ class NetworkingKit private constructor(
          * Create Retrofit instance for specific gateway
          */
         private fun createRetrofit(baseUrl: String, okHttpClient: OkHttpClient): Retrofit {
-            val moshi = Moshi.Builder()
-                .add(KotlinJsonAdapterFactory())
-                .add(MoshiArrayListJsonAdapter.FACTORY)
-                .add(FallbackEnum.ADAPTER_FACTORY)
-                .build()
+            val json = Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            }
 
             return Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .client(okHttpClient)
-                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .build()
         }
 
