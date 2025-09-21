@@ -1,7 +1,7 @@
 package com.indiedev.networking.di
 
 import com.indiedev.networking.api.NetworkExternalAPI
-import com.indiedev.networking.qualifiers.IdentityGateway
+import com.indiedev.networking.qualifiers.AuthGateway
 import com.indiedev.networking.qualifiers.MainGateway
 import com.indiedev.networking.qualifiers.SecureGateway
 import dagger.Module
@@ -20,7 +20,7 @@ class NetworkExternalAPIModule {
     fun provideExternalAPI(
         @MainGateway retrofitMain: Retrofit,
         @SecureGateway retrofitSecure: Retrofit?,
-        @IdentityGateway retrofitIdentity: Retrofit?,
+        @AuthGateway retrofitIdentity: Retrofit?,
     ): NetworkExternalAPI {
         return object : NetworkExternalAPI {
             override fun <T> createServiceOnMainGateway(type: Class<T>): T {
