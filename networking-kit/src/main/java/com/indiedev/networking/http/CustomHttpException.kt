@@ -4,13 +4,16 @@ import org.json.simple.parser.JSONParser
 
 open class CustomHttpException(private val response: retrofit2.Response<*>) : RuntimeException() {
     private val customMessage: String
+    private val customErrorCode: String?
     private val errorJson: String? = response.errorBody()?.string()
 
     override val message: String?
         get() = "HTTP ${response.code()} $customMessage"
 
     init {
-        customMessage = getErrorMessage(errorJson)
+        val errorData = parseErrorData(errorJson)
+        customMessage = errorData.first
+        customErrorCode = errorData.second
     }
 
     open fun code(): Int {
@@ -22,19 +25,29 @@ open class CustomHttpException(private val response: retrofit2.Response<*>) : Ru
         return customMessage
     }
 
-    private fun getErrorMessage(rawJson: String?): String {
-        return try {
-            val obj = JSONParser().parse(rawJson) as org.json.simple.JSONObject
+    /** Custom error code from response body.  */
+    open fun errorCode(): String? {
+        return customErrorCode
+    }
 
-            var message = obj["message"] as String?
+    private fun parseErrorData(rawJson: String?): Pair<String, String?> {
+        return try {
+            val obj = JSONParser().parse(rawJson) as? org.json.simple.JSONObject
+                ?: return Pair(response.message(), null)
+
+            var message = obj["message"] as? String
+            val errorCode = obj["code"] as? String ?: obj["error_code"] as? String
 
             if (message.isNullOrBlank()) {
-                message = (obj["errors"] as org.json.simple.JSONArray)[0] as String
+                val errors = obj["errors"] as? org.json.simple.JSONArray
+                message = if (!errors.isNullOrEmpty()) {
+                    errors[0] as? String
+                } else null
             }
 
-            return message
+            Pair(message ?: response.message(), errorCode)
         } catch (ex: Exception) {
-            response.message()
+            Pair(response.message(), null)
         }
     }
 }
