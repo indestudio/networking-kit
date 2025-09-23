@@ -12,8 +12,9 @@ import retrofit2.HttpException
 interface TokenRefreshConfig<REQUEST, RESPONSE> {
     
     /**
-     * Returns the service class that networking-kit will use to create the Retrofit service
-     * The returned class must extend TokenRefreshService
+     * Returns the service interface class that networking-kit will use to create the Retrofit service.
+     * The returned interface class must extend TokenRefreshService and contain exactly one method
+     * with proper Retrofit annotations. See [TokenRefreshService] documentation for implementation example.
      */
     fun getServiceClass(): Class<out TokenRefreshService>
     
@@ -41,8 +42,26 @@ interface TokenRefreshConfig<REQUEST, RESPONSE> {
 }
 
 /**
- * Marker interface that all token refresh services must implement
- * This is only used for type checking, not for Retrofit service creation
+ * Marker interface that all token refresh services must implement.
+ * 
+ * Apps should extend this interface and provide one method with Retrofit annotations
+ * for their token refresh endpoint.
+ * 
+ * Example implementation:
+ * ```
+ * interface AppTokenRefreshService : TokenRefreshService {
+ *     @Headers("client-key: your-client-key")
+ *     @POST("v1/identity/token/renew")
+ *     suspend fun renewToken(@Body request: RefreshTokenRequest): RefreshTokenResponse
+ * }
+ * ```
+ * 
+ * Requirements:
+ * - Must extend TokenRefreshService
+ * - Must have exactly one method with @POST (or other HTTP method) annotation
+ * - Must use @Body annotation for the request parameter
+ * - Method should be suspend function for coroutine support
+ * - Can include @Headers for additional headers like client keys
  */
 interface TokenRefreshService
 
