@@ -68,7 +68,7 @@ class MockResponseInterceptor(
             
             // Read and compress the mock data
             val jsonString = readJsonFromRaw(context, resourceId)
-            val compressedResponse = compressString(jsonString)
+//            val compressedResponse = compressString(jsonString)
             
             // Build the mock response
             val responseBuilder = Response.Builder()
@@ -76,9 +76,9 @@ class MockResponseInterceptor(
                 .protocol(Protocol.HTTP_2)
                 .code(mockInfo.statusCode)
                 .message("OK")
-                .body(compressedResponse.toResponseBody(mockInfo.contentType.toMediaTypeOrNull()))
+                .body(jsonString.toResponseBody(mockInfo.contentType.toMediaTypeOrNull()))
                 .addHeader("content-type", mockInfo.contentType)
-                .addHeader("content-encoding", "gzip")
+//                .addHeader("content-encoding", "gzip")
             
             // Add custom headers if any
             mockInfo.headers.forEach { (name, value) ->
