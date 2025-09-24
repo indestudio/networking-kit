@@ -1,6 +1,6 @@
 package com.indiedev.networking.event
 
-import com.indiedev.networking.api.NetworkEventLogger
+import com.indiedev.networking.contracts.NetworkEventLogger
 import com.indiedev.networking.event.EventsProperties.API_URL
 import com.indiedev.networking.event.EventsProperties.BACKEND_CODE
 import com.indiedev.networking.event.EventsProperties.ERROR_MESSAGE
@@ -74,10 +74,9 @@ object EventsNames {
 }
 
 object EventsProperties {
-    private const val PREFIX = "BZ_"
-    const val HTTP_CODE = PREFIX + "httpCode"
-    const val BACKEND_CODE = PREFIX + "backendCode"
-    const val ERROR_MESSAGE = PREFIX + "ErrorMessage"
-    const val API_URL = PREFIX + "ApiUrl"
-    const val EXCEPTION_NAME = PREFIX + "ExceptionName"
+    const val HTTP_CODE = "httpCode"
+    const val BACKEND_CODE =  "backendCode"
+    const val ERROR_MESSAGE = "ErrorMessage"
+    const val API_URL = "ApiUrl"
+    const val EXCEPTION_NAME = "ExceptionName"
 }

@@ -4,16 +4,16 @@ import android.content.Context
 import com.appmattus.certificatetransparency.certificateTransparencyInterceptor
 import com.appmattus.certificatetransparency.loglist.LogListDataSourceFactory
 import com.chuckerteam.chucker.api.ChuckerInterceptor
-import com.indiedev.networking.api.*
-import com.indiedev.networking.authenticator.AccessTokenAuthenticator
+import com.indiedev.networking.contracts.*
+import com.indiedev.networking.authenticator.TokenRefreshAuthenticator
 import com.indiedev.networking.event.EventsHelper
-import com.indiedev.networking.interceptors.ApiFailureInterceptor
+import com.indiedev.networking.interceptors.HttpErrorInterceptor
 import com.indiedev.networking.interceptor.CacheInterceptor
-import com.indiedev.networking.interceptors.HeadersInterceptor
-import com.indiedev.networking.interceptors.MockInterceptor
+import com.indiedev.networking.interceptors.DefaultHeadersInterceptor
+import com.indiedev.networking.interceptors.MockResponseInterceptor
 import com.indiedev.networking.interceptors.NoConnectionInterceptor
-import com.indiedev.networking.token.AuthTokenProvider
-import com.indiedev.networking.utils.AppVersionDetailsProviderImp
+import com.indiedev.networking.token.AccessTokenProvider
+import com.indiedev.networking.utils.AppVersionProviderImp
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
@@ -104,7 +104,7 @@ class NetworkingKit private constructor(
 
             // Create shared components
             val authTokenProvider = createAuthTokenProvider(session)
-            val versionDetailsProvider = AppVersionDetailsProviderImp(context)
+            val versionDetailsProvider = AppVersionProviderImp(context)
 
             // Create OkHttpClients for different gateways
             val mainOkHttpClient = createMainOkHttpClient(
@@ -204,9 +204,9 @@ class NetworkingKit private constructor(
         /**
          * Create AuthTokenProvider wrapper
          */
-        private fun createAuthTokenProvider(sessionManager: SessionManager): AuthTokenProvider {
-            return object : AuthTokenProvider {
-                override fun getAuthToken(): String {
+        private fun createAuthTokenProvider(sessionManager: SessionManager): AccessTokenProvider {
+            return object : AccessTokenProvider {
+                override fun getAccessToken(): String {
                     return sessionManager.getAuthToken()
                 }
             }
@@ -216,14 +216,14 @@ class NetworkingKit private constructor(
          * Create OkHttpClient for Main Gateway
          */
         private fun createMainOkHttpClient(
-            authTokenProvider: AuthTokenProvider,
-            versionDetailsProvider: AppVersionDetailsProviderImp,
+            accessTokenProvider: AccessTokenProvider,
+            versionDetailsProvider: AppVersionProviderImp,
             certTransparencyProvider: CertTransparencyFlagProvider,
             exceptionLogger: NetworkApiExceptionLogger,
             gatewayUrls: GatewaysBaseUrls
         ): OkHttpClient {
             return createBaseOkHttpClient(
-                authTokenProvider,
+                accessTokenProvider,
                 versionDetailsProvider,
                 certTransparencyProvider,
                 exceptionLogger,
@@ -235,14 +235,14 @@ class NetworkingKit private constructor(
          * Create OkHttpClient for Secure Gateway
          */
         private fun createSecureOkHttpClient(
-            authTokenProvider: AuthTokenProvider,
-            versionDetailsProvider: AppVersionDetailsProviderImp,
+            accessTokenProvider: AccessTokenProvider,
+            versionDetailsProvider: AppVersionProviderImp,
             certTransparencyProvider: CertTransparencyFlagProvider,
             exceptionLogger: NetworkApiExceptionLogger,
             gatewayUrls: GatewaysBaseUrls
         ): OkHttpClient {
             return createBaseOkHttpClient(
-                authTokenProvider,
+                accessTokenProvider,
                 versionDetailsProvider,
                 certTransparencyProvider,
                 exceptionLogger,
@@ -254,14 +254,14 @@ class NetworkingKit private constructor(
          * Create OkHttpClient for Auth Gateway (no authenticator to avoid circular dependency)
          */
         private fun createAuthOkHttpClient(
-            authTokenProvider: AuthTokenProvider,
-            versionDetailsProvider: AppVersionDetailsProviderImp,
+            accessTokenProvider: AccessTokenProvider,
+            versionDetailsProvider: AppVersionProviderImp,
             certTransparencyProvider: CertTransparencyFlagProvider,
             exceptionLogger: NetworkApiExceptionLogger,
             gatewayUrls: GatewaysBaseUrls
         ): OkHttpClient {
             return createBaseOkHttpClient(
-                authTokenProvider,
+                accessTokenProvider,
                 versionDetailsProvider,
                 certTransparencyProvider,
                 exceptionLogger,
@@ -273,8 +273,8 @@ class NetworkingKit private constructor(
          * Create base OkHttpClient with all interceptors
          */
         private fun createBaseOkHttpClient(
-            authTokenProvider: AuthTokenProvider,
-            versionDetailsProvider: AppVersionDetailsProviderImp,
+            accessTokenProvider: AccessTokenProvider,
+            versionDetailsProvider: AppVersionProviderImp,
             certTransparencyProvider: CertTransparencyFlagProvider,
             exceptionLogger: NetworkApiExceptionLogger,
             gatewayUrls: GatewaysBaseUrls
@@ -294,8 +294,8 @@ class NetworkingKit private constructor(
 
             // Add regular interceptors in correct order
             builder.addInterceptor(NoConnectionInterceptor(context))
-                .addInterceptor(HeadersInterceptor(authTokenProvider, versionDetailsProvider))
-                .addInterceptor(ApiFailureInterceptor(exceptionLogger))
+                .addInterceptor(DefaultHeadersInterceptor(accessTokenProvider, versionDetailsProvider))
+                .addInterceptor(HttpErrorInterceptor(exceptionLogger))
 
             // Add certificate transparency network interceptor if enabled
             if (certTransparencyProvider.isFlagEnable()) {
@@ -333,7 +333,7 @@ class NetworkingKit private constructor(
                 val flipperInterceptor = FlipperInterceptorFactory.createInterceptor(context)
                 flipperInterceptor?.let {
                     builder.addNetworkInterceptor(it)
-                    builder.addNetworkInterceptor(MockInterceptor(context))
+                    builder.addNetworkInterceptor(MockResponseInterceptor(context))
                 }
             }
 
@@ -371,7 +371,7 @@ class NetworkingKit private constructor(
             authRetrofit: Retrofit?
         ): Authenticator {
             return if (authRetrofit != null && sessionManager.getTokenRefreshConfig() != null) {
-                AccessTokenAuthenticator(sessionManager, eventsHelper, lazy { authRetrofit })
+                TokenRefreshAuthenticator(sessionManager, eventsHelper, lazy { authRetrofit })
             } else {
                 Authenticator.NONE
             }

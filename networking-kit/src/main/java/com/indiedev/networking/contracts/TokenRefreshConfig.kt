@@ -1,4 +1,4 @@
-package com.indiedev.networking.api
+package com.indiedev.networking.contracts
 
 import retrofit2.HttpException
 

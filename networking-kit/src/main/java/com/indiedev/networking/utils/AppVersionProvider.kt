@@ -7,14 +7,14 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
-internal interface AppVersionDetailsProvider {
+internal interface AppVersionProvider {
     fun getAppVersionName(): String
 
     fun getAppVersionCode(): String
 }
 
-class AppVersionDetailsProviderImp @Inject constructor(@ApplicationContext val context: Context) :
-    AppVersionDetailsProvider {
+class AppVersionProviderImp @Inject constructor(@ApplicationContext val context: Context) :
+    AppVersionProvider {
     override fun getAppVersionName(): String {
         return getVersionDetail().first ?: "unknown"
     }

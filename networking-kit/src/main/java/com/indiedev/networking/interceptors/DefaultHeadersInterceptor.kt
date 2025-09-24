@@ -1,19 +1,19 @@
 package com.indiedev.networking.interceptors
 
-import com.indiedev.networking.token.AuthTokenProvider
-import com.indiedev.networking.utils.AppVersionDetailsProvider
+import com.indiedev.networking.token.AccessTokenProvider
+import com.indiedev.networking.utils.AppVersionProvider
 import okhttp3.Interceptor
 import okhttp3.Response
 
-internal class HeadersInterceptor constructor(
-    private val tokenProvider: AuthTokenProvider,
-    private val versionDetailsProvider: AppVersionDetailsProvider,
+internal class DefaultHeadersInterceptor(
+    private val tokenProvider: AccessTokenProvider,
+    private val versionDetailsProvider: AppVersionProvider,
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         return chain.proceed(
             chain.request().newBuilder()
-                .header(AUTHORIZATION, "$BEARER ${tokenProvider.getAuthToken()}")
+                .header(AUTHORIZATION, "$BEARER ${tokenProvider.getAccessToken()}")
                 .header(APP_VERSION_NAME, versionDetailsProvider.getAppVersionName() )
                 .header(APP_VERSION_CODE, versionDetailsProvider.getAppVersionCode())
                 .build(),

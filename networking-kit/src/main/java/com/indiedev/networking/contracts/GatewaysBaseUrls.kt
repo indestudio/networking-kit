@@ -1,4 +1,4 @@
-package com.indiedev.networking.api
+package com.indiedev.networking.contracts
 
 interface GatewaysBaseUrls {
 

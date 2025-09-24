@@ -1,6 +1,6 @@
 package com.indiedev.networking.interceptors
 
-import com.indiedev.networking.api.NetworkApiExceptionLogger
+import com.indiedev.networking.contracts.NetworkApiExceptionLogger
 import com.indiedev.networking.event.EventsProperties
 import com.indiedev.networking.http.ClientHttpException
 import com.indiedev.networking.http.CustomHttpException
@@ -17,7 +17,7 @@ import retrofit2.Response.error
 import java.io.IOException
 import javax.inject.Inject
 
-internal class ApiFailureInterceptor @Inject constructor(
+internal class HttpErrorInterceptor @Inject constructor(
     private val exceptionLogger: NetworkApiExceptionLogger,
 ) : Interceptor {
 

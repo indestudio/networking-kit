@@ -1,7 +1,7 @@
 package com.indiedev.networking.authenticator
 
-import com.indiedev.networking.api.SessionManager
-import com.indiedev.networking.api.TokenRefreshConfig
+import com.indiedev.networking.contracts.SessionManager
+import com.indiedev.networking.contracts.TokenRefreshConfig
 import com.indiedev.networking.common.EMPTY_STRING
 import com.indiedev.networking.common.PREFIX_AUTH_TOKEN
 import com.indiedev.networking.event.EventsHelper
@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.lang.reflect.Method
 import kotlin.coroutines.intrinsics.*
 
-internal class AccessTokenAuthenticator(
+internal class TokenRefreshAuthenticator(
     private val sessionManager: SessionManager,
     private val eventsHelper: EventsHelper,
     private val retrofitLazy: Lazy<retrofit2.Retrofit>,

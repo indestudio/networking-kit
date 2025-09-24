@@ -16,8 +16,8 @@ import java.io.InputStreamReader
 import java.util.zip.GZIPOutputStream
 import androidx.core.net.toUri
 
-class MockInterceptor(@ApplicationContext val context: Context) : Interceptor {
-    private val tag = MockInterceptor::class.simpleName
+class MockResponseInterceptor(@ApplicationContext val context: Context) : Interceptor {
+    private val tag = MockResponseInterceptor::class.simpleName
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val uri = chain.request().url.toUri().toString()
