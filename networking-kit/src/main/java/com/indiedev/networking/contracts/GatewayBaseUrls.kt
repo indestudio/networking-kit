@@ -1,6 +1,6 @@
 package com.indiedev.networking.contracts
 
-interface GatewaysBaseUrls {
+interface GatewayBaseUrls {
 
     fun getMainGatewayUrl(): String
 

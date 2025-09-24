@@ -1,6 +1,6 @@
 package com.indiedev.networking.authenticator
 
-import com.indiedev.networking.contracts.SessionManager
+import com.indiedev.networking.contracts.SessionTokenManager
 import com.indiedev.networking.contracts.TokenRefreshConfig
 import com.indiedev.networking.common.EMPTY_STRING
 import com.indiedev.networking.common.PREFIX_AUTH_TOKEN
@@ -23,7 +23,7 @@ import java.lang.reflect.Method
 import kotlin.coroutines.intrinsics.*
 
 internal class TokenRefreshAuthenticator(
-    private val sessionManager: SessionManager,
+    private val sessionTokenManager: SessionTokenManager,
     private val eventsHelper: EventsHelper,
     private val retrofitLazy: Lazy<retrofit2.Retrofit>,
 ) : Authenticator {
@@ -34,7 +34,7 @@ internal class TokenRefreshAuthenticator(
     private val waitingCount = AtomicInteger(0)
     
     private val tokenRefreshService: Any? by lazy {
-        val config = sessionManager.getTokenRefreshConfig()
+        val config = sessionTokenManager.getTokenRefreshConfig()
         config?.let {
             retrofitLazy.value.create(it.getServiceClass())
         }
@@ -43,14 +43,14 @@ internal class TokenRefreshAuthenticator(
     override fun authenticate(route: Route?, response: Response): Request? {
         if (!isRequestWithAccessToken(response)) return null
 
-        val authToken = sessionManager.getAuthToken()
+        val authToken = sessionTokenManager.getAccessToken()
 
         waitingCount.incrementAndGet()
 
         return runBlocking {
             mutex.withLock {
                 try {
-                    val newAuthToken = sessionManager.getAuthToken()
+                    val newAuthToken = sessionTokenManager.getAccessToken()
 
                     if (authToken != newAuthToken) {
                         return@runBlocking newRequestWithAccessToken(response.request, newAuthToken)
@@ -72,7 +72,7 @@ internal class TokenRefreshAuthenticator(
     }
 
     private suspend fun refreshTokenOrAbort(response: Response): Request? {
-        val config = sessionManager.getTokenRefreshConfig()
+        val config = sessionTokenManager.getTokenRefreshConfig()
         if (config == null) {
             eventsHelper.logEvent(EventsNames.EVENT_REFRESHING_AUTH_TOKEN_FAILED)
             shouldAbort = waitingCount.get() > 1
@@ -135,7 +135,7 @@ internal class TokenRefreshAuthenticator(
                     if (shouldAbortDueToHttpException(error.exception)) {
                         if (config.isRefreshTokenExpired(error.exception as HttpException)) {
                             eventsHelper.logEvent(EventsNames.EVENT_REFRESH_TOKEN_NOT_VALID)
-                            sessionManager.onTokenExpires()
+                            sessionTokenManager.onTokenExpires()
                         }
                         shouldAbort = waitingCount.get() > 1
 
@@ -183,12 +183,12 @@ internal class TokenRefreshAuthenticator(
     ): Request {
         tokenResponse.data?.let { responseData ->
             val tokens = config.extractTokens(responseData)
-            sessionManager.onTokenRefreshed(tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
+            sessionTokenManager.onTokenRefreshed(tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
         }
 
         return newRequestWithAccessToken(
             response.request,
-            sessionManager.getAuthToken(),
+            sessionTokenManager.getAccessToken(),
         )
     }
 

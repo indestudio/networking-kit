@@ -1,6 +1,6 @@
 package com.indiedev.networking.interceptors
 
-import com.indiedev.networking.contracts.NetworkApiExceptionLogger
+import com.indiedev.networking.contracts.ExceptionLogger
 import com.indiedev.networking.event.EventsProperties
 import com.indiedev.networking.http.ClientHttpException
 import com.indiedev.networking.http.CustomHttpException
@@ -18,7 +18,7 @@ import java.io.IOException
 import javax.inject.Inject
 
 internal class HttpErrorInterceptor @Inject constructor(
-    private val exceptionLogger: NetworkApiExceptionLogger,
+    private val exceptionLogger: ExceptionLogger,
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {

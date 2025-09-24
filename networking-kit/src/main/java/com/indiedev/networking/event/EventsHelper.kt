@@ -1,6 +1,6 @@
 package com.indiedev.networking.event
 
-import com.indiedev.networking.contracts.NetworkEventLogger
+import com.indiedev.networking.contracts.EventLogger
 import com.indiedev.networking.event.EventsProperties.API_URL
 import com.indiedev.networking.event.EventsProperties.BACKEND_CODE
 import com.indiedev.networking.event.EventsProperties.ERROR_MESSAGE
@@ -25,7 +25,7 @@ internal interface EventsHelper {
 }
 
 internal class EventHelperImp @Inject constructor(
-    private val eventLogger: NetworkEventLogger,
+    private val eventLogger: EventLogger,
 ) : EventsHelper {
 
     override fun logEvent(eventName: String, properties: HashMap<String, Any>) {

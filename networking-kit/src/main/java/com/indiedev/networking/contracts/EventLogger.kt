@@ -1,5 +1,5 @@
 package com.indiedev.networking.contracts
 
-interface NetworkEventLogger {
+interface EventLogger {
     fun logEvent(eventName: String, properties: HashMap<String, Any> = HashMap())
 }

@@ -49,11 +49,11 @@ class NetworkingKit private constructor(
 
 
     class Builder(private val context: Context) {
-        private var gatewayUrls: GatewaysBaseUrls? = null
-        private var sessionManager: SessionManager? = null
-        private var eventLogger: NetworkEventLogger? = null
-        private var exceptionLogger: NetworkApiExceptionLogger? = null
-        private var certTransparencyProvider: CertTransparencyFlagProvider? = null
+        private var gatewayUrls: GatewayBaseUrls? = null
+        private var sessionTokenManager: SessionTokenManager? = null
+        private var eventLogger: EventLogger? = null
+        private var exceptionLogger: ExceptionLogger? = null
+        private var certTransparencyProvider: CertTransparencyConfig? = null
 
         private val readTimeoutSeconds = 70L
         private val writeTimeoutSeconds = 70L
@@ -61,27 +61,27 @@ class NetworkingKit private constructor(
         private val cacheSizeBytes = 10L * 1024 * 1024 // 10MB
 
 
-        fun gatewayUrls(urls: GatewaysBaseUrls) = apply {
+        fun gatewayUrls(urls: GatewayBaseUrls) = apply {
             this.gatewayUrls = urls
         }
 
 
-        fun sessionManager(manager: SessionManager) = apply {
-            this.sessionManager = manager
+        fun sessionManager(manager: SessionTokenManager) = apply {
+            this.sessionTokenManager = manager
         }
 
 
-        fun eventLogger(logger: NetworkEventLogger) = apply {
+        fun eventLogger(logger: EventLogger) = apply {
             this.eventLogger = logger
         }
 
 
-        fun exceptionLogger(logger: NetworkApiExceptionLogger) = apply {
+        fun exceptionLogger(logger: ExceptionLogger) = apply {
             this.exceptionLogger = logger
         }
 
 
-        fun certTransparencyProvider(provider: CertTransparencyFlagProvider) = apply {
+        fun certTransparencyProvider(provider: CertTransparencyConfig) = apply {
             this.certTransparencyProvider = provider
         }
 
@@ -94,7 +94,7 @@ class NetworkingKit private constructor(
                 ?: throw IllegalStateException("Gateway URLs are required. Call gatewayUrls() method.")
             
             // Optional dependencies with defaults
-            val session = sessionManager ?: createDefaultSessionManager()
+            val session = sessionTokenManager ?: createDefaultSessionManager()
             val events = eventLogger ?: createDefaultEventLogger()
             val exceptions = exceptionLogger ?: createDefaultExceptionLogger()
             val certProvider = certTransparencyProvider ?: createDefaultCertTransparencyProvider()
@@ -150,8 +150,8 @@ class NetworkingKit private constructor(
          * Create EventsHelper wrapper that bridges NetworkEventLogger and NetworkApiExceptionLogger
          */
         private fun createEventsHelper(
-            eventLogger: NetworkEventLogger,
-            exceptionLogger: NetworkApiExceptionLogger
+            eventLogger: EventLogger,
+            exceptionLogger: ExceptionLogger
         ): EventsHelper {
             return object : EventsHelper {
                 override fun logEvent(eventName: String, properties: HashMap<String, Any>) {
@@ -204,10 +204,10 @@ class NetworkingKit private constructor(
         /**
          * Create AuthTokenProvider wrapper
          */
-        private fun createAuthTokenProvider(sessionManager: SessionManager): AccessTokenProvider {
+        private fun createAuthTokenProvider(sessionTokenManager: SessionTokenManager): AccessTokenProvider {
             return object : AccessTokenProvider {
                 override fun getAccessToken(): String {
-                    return sessionManager.getAuthToken()
+                    return sessionTokenManager.getAccessToken()
                 }
             }
         }
@@ -218,9 +218,9 @@ class NetworkingKit private constructor(
         private fun createMainOkHttpClient(
             accessTokenProvider: AccessTokenProvider,
             versionDetailsProvider: AppVersionProviderImp,
-            certTransparencyProvider: CertTransparencyFlagProvider,
-            exceptionLogger: NetworkApiExceptionLogger,
-            gatewayUrls: GatewaysBaseUrls
+            certTransparencyProvider: CertTransparencyConfig,
+            exceptionLogger: ExceptionLogger,
+            gatewayUrls: GatewayBaseUrls
         ): OkHttpClient {
             return createBaseOkHttpClient(
                 accessTokenProvider,
@@ -237,9 +237,9 @@ class NetworkingKit private constructor(
         private fun createSecureOkHttpClient(
             accessTokenProvider: AccessTokenProvider,
             versionDetailsProvider: AppVersionProviderImp,
-            certTransparencyProvider: CertTransparencyFlagProvider,
-            exceptionLogger: NetworkApiExceptionLogger,
-            gatewayUrls: GatewaysBaseUrls
+            certTransparencyProvider: CertTransparencyConfig,
+            exceptionLogger: ExceptionLogger,
+            gatewayUrls: GatewayBaseUrls
         ): OkHttpClient {
             return createBaseOkHttpClient(
                 accessTokenProvider,
@@ -256,9 +256,9 @@ class NetworkingKit private constructor(
         private fun createAuthOkHttpClient(
             accessTokenProvider: AccessTokenProvider,
             versionDetailsProvider: AppVersionProviderImp,
-            certTransparencyProvider: CertTransparencyFlagProvider,
-            exceptionLogger: NetworkApiExceptionLogger,
-            gatewayUrls: GatewaysBaseUrls
+            certTransparencyProvider: CertTransparencyConfig,
+            exceptionLogger: ExceptionLogger,
+            gatewayUrls: GatewayBaseUrls
         ): OkHttpClient {
             return createBaseOkHttpClient(
                 accessTokenProvider,
@@ -275,9 +275,9 @@ class NetworkingKit private constructor(
         private fun createBaseOkHttpClient(
             accessTokenProvider: AccessTokenProvider,
             versionDetailsProvider: AppVersionProviderImp,
-            certTransparencyProvider: CertTransparencyFlagProvider,
-            exceptionLogger: NetworkApiExceptionLogger,
-            gatewayUrls: GatewaysBaseUrls
+            certTransparencyProvider: CertTransparencyConfig,
+            exceptionLogger: ExceptionLogger,
+            gatewayUrls: GatewayBaseUrls
         ): OkHttpClient {
             val cacheDir = File(context.cacheDir, "networking_cache")
             val cache = Cache(cacheDir, cacheSizeBytes)
@@ -366,12 +366,12 @@ class NetworkingKit private constructor(
          * Create authenticator for token refresh
          */
         private fun createAuthenticator(
-            sessionManager: SessionManager,
+            sessionTokenManager: SessionTokenManager,
             eventsHelper: EventsHelper,
             authRetrofit: Retrofit?
         ): Authenticator {
-            return if (authRetrofit != null && sessionManager.getTokenRefreshConfig() != null) {
-                TokenRefreshAuthenticator(sessionManager, eventsHelper, lazy { authRetrofit })
+            return if (authRetrofit != null && sessionTokenManager.getTokenRefreshConfig() != null) {
+                TokenRefreshAuthenticator(sessionTokenManager, eventsHelper, lazy { authRetrofit })
             } else {
                 Authenticator.NONE
             }
@@ -380,9 +380,9 @@ class NetworkingKit private constructor(
         /**
          * Create default SessionManager (no-op implementation)
          */
-        private fun createDefaultSessionManager(): SessionManager {
-            return object : SessionManager {
-                override fun getAuthToken(): String = ""
+        private fun createDefaultSessionManager(): SessionTokenManager {
+            return object : SessionTokenManager {
+                override fun getAccessToken(): String = ""
                 override fun onTokenRefreshed(accessToken: String, refreshToken: String, expiresIn: Long) {}
                 override fun onTokenExpires() {}
                 override fun getTokenRefreshConfig(): TokenRefreshConfig<*, *>? = null
@@ -392,8 +392,8 @@ class NetworkingKit private constructor(
         /**
          * Create default NetworkEventLogger (no-op implementation)
          */
-        private fun createDefaultEventLogger(): NetworkEventLogger {
-            return object : NetworkEventLogger {
+        private fun createDefaultEventLogger(): EventLogger {
+            return object : EventLogger {
                 override fun logEvent(eventName: String, properties: HashMap<String, Any>) {}
             }
         }
@@ -401,8 +401,8 @@ class NetworkingKit private constructor(
         /**
          * Create default NetworkApiExceptionLogger (no-op implementation)
          */
-        private fun createDefaultExceptionLogger(): NetworkApiExceptionLogger {
-            return object : NetworkApiExceptionLogger {
+        private fun createDefaultExceptionLogger(): ExceptionLogger {
+            return object : ExceptionLogger {
                 override fun logException(throwable: Throwable) {}
                 override fun logException(throwable: Throwable, customKeys: Map<String, Any>) {}
             }
@@ -411,8 +411,8 @@ class NetworkingKit private constructor(
         /**
          * Create default CertTransparencyFlagProvider (disabled by default)
          */
-        private fun createDefaultCertTransparencyProvider(): CertTransparencyFlagProvider {
-            return object : CertTransparencyFlagProvider {
+        private fun createDefaultCertTransparencyProvider(): CertTransparencyConfig {
+            return object : CertTransparencyConfig {
                 override fun isFlagEnable(): Boolean = false
             }
         }

@@ -1,6 +1,6 @@
 package com.indiedev.networking.contracts
 
-interface NetworkApiExceptionLogger {
+interface ExceptionLogger {
     fun logException(throwable: Throwable)
 
     fun logException(throwable: Throwable, customKeys: Map<String, Any>) {

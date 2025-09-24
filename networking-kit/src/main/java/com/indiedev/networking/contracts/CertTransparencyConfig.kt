@@ -1,5 +1,5 @@
 package com.indiedev.networking.contracts
 
-interface CertTransparencyFlagProvider {
+interface CertTransparencyConfig {
     fun isFlagEnable(): Boolean
 }
