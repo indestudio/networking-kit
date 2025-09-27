@@ -326,7 +326,7 @@ class NetworkingKit private constructor(
                 )
             }
 
-            builder.addInterceptor(CacheInterceptor())
+
 
             // Add debug interceptors if enabled
             if (BuildConfig.DEBUG) {
@@ -346,6 +346,7 @@ class NetworkingKit private constructor(
             }
 
             // Add cache network interceptor last
+            builder.addNetworkInterceptor(CacheInterceptor(context))
 
             return builder.build()
         }
