@@ -113,11 +113,47 @@
 
 Add NetworkingKit to your module's `build.gradle.kts`:
 
+#### Gradle (Kotlin DSL)
 ```kotlin
 dependencies {
-    implementation("com.indiedev:networking-kit:1.0.0")
+    // Release variant (recommended for production)
+    implementation("com.indiedev:networking-kit-release:1.0.0")
+
+    // Debug variant (includes additional debugging tools)
+    debugImplementation("com.indiedev:networking-kit-debug:1.0.0")
 }
 ```
+
+#### Gradle (Groovy)
+```groovy
+dependencies {
+    // Release variant (recommended for production)
+    implementation 'com.indiedev:networking-kit-release:1.0.0'
+
+    // Debug variant (includes additional debugging tools)
+    debugImplementation 'com.indiedev:networking-kit-debug:1.0.0'
+}
+```
+
+#### Maven
+```xml
+<!-- Release variant -->
+<dependency>
+  <groupId>com.indiedev</groupId>
+  <artifactId>networking-kit-release</artifactId>
+  <version>1.0.0</version>
+</dependency>
+
+<!-- Debug variant -->
+<dependency>
+  <groupId>com.indiedev</groupId>
+  <artifactId>networking-kit-debug</artifactId>
+  <version>1.0.0</version>
+  <scope>test</scope>
+</dependency>
+```
+
+> **Note**: The debug variant includes Flipper, Chucker, and additional logging tools for development. Use the release variant for production builds.
 
 ### Basic Setup
 
