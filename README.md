@@ -1,43 +1,123 @@
-# NetworkingKit 🚀
+# NetworkingKit
 
-A comprehensive, production-ready networking library for Android applications built on top of Retrofit, OkHttp3, and Kotlinx Serialization. NetworkingKit provides enterprise-grade features including automatic token refresh, comprehensive error handling, debug tooling, and flexible configuration options.
+<div align="center">
 
-## Features ✨
+[![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/Language-Kotlin-blue.svg)](https://kotlinlang.org)
+[![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg)](LICENSE)
+[![API](https://img.shields.io/badge/API-24%2B-brightgreen.svg)](https://android-arsenal.com/api?level=24)
 
-### 🌐 Core Networking
-- **Multi-Gateway Support**: Separate endpoints for Main, Secure, and Authentication APIs
-- **Modern Stack**: Built with Retrofit + OkHttp3 + Kotlinx Serialization
-- **Smart Caching**: 10MB HTTP cache with intelligent control via custom headers
-- **Security**: Certificate Transparency support for enhanced security
-- **Performance**: Configurable timeouts (70s read/write, 30s connect) and connection pooling
+*Enterprise-grade Android networking - Multi-gateway architecture, universal caching, zero-config auth*
 
-### 🔐 Advanced Authentication
-- **Automatic Token Refresh**: Thread-safe token refresh with mutex synchronization
-- **Generic Token API**: Flexible configuration for any token refresh endpoint via reflection
-- **Session Management**: Abstract token storage with lifecycle callbacks
-- **Circuit Breaker**: Prevents cascading failures during token refresh
-- **Retry Logic**: Configurable retry attempts (default: 3) with abort mechanisms
+</div>
 
-### 🔧 Comprehensive Interceptors
-- **Headers**: Auto Bearer token injection + app version headers
-- **API Failure**: HTTP error classification (4xx/5xx) with structured logging
-- **Connectivity**: Network detection with custom exceptions (WiFi, Cellular, VPN)
-- **Caching**: Dynamic cache control via `Cache-Duration` and `Cache-Unit` headers
-- **Mocking**: Development-time API mocking from Android raw resources (debug only)
+**NetworkingKit** is an enterprise-grade Android networking library designed for production applications. Built on Retrofit, OkHttp3, and Kotlinx Serialization, it provides **multi-gateway architecture**, **universal API caching**, **zero-config authentication**, and **comprehensive error handling** with minimal setup.
 
-### ⚠️ Sophisticated Error Handling
-- **Custom Exceptions**: `ClientHttpException`, `ServerHttpException`, Connection errors
-- **JSON Error Parsing**: Extract error messages and codes from API responses (`code`/`error_code` fields)
-- **Safe API Calls**: `safeApiCall` wrapper with `Result<T>` sealed class
-- **Error Classification**: Utility functions for error type detection
+**Key Features:**
+- 🏢 **Multi-Gateway Architecture** - Separate Main, Secure (card transactions), and Auth gateways
+- 🔐 **Zero auth complexity** - Automatic token management built-in (access and refresh tokens)
+- 💾 **No DB needed** - Cache any API response directly
+- 🛡️ **Security by default** - Certificate transparency without manual SSL pinning
+- 🌐 **Smart connectivity** - Built-in network detection and connectivity checks
+- ⚠️ **Advanced error handling** - Custom exceptions with detailed error info and automatic logging
+- 🔍 **Built-in debugging** - Flipper, Chucker, and HTTP logging support
+- 🧪 **Easy testing** - Mock any API with JSON files
 
-### 🧪 Development & Testing
-- **HTTP Logging**: Full request/response debugging (debug builds only)
-- **Chucker Integration**: Visual network inspector (debug builds only)
-- **Flipper Support**: Facebook's debugging tools (debug builds only)
-- **Mock System**: JSON-based response mocking from `res/raw/` resources
+## ✨ Core Features
 
-## Quick Start 🚀
+<table>
+<tr>
+<td>
+
+**🏢 Multi-Gateway Architecture**
+- **Main Gateway** - Standard API operations
+- **Secure Gateway** - Card transactions & sensitive operations
+- **Auth Gateway** - Authentication & token management
+
+</td>
+<td>
+
+**🔐 Zero Auth Complexity**
+- Automatic access/refresh token management
+- Thread-safe session management
+- No manual token handling required in app
+- Built-in retry logic for auth failures
+
+</td>
+</tr>
+<tr>
+<td>
+
+**💾 Universal Caching (No DB Needed)**
+- Cache any API response (GET, POST, PUT, PATCH)
+- Custom cache duration via headers
+- No Room DB dependency needed
+- Intelligent cache management
+
+</td>
+<td>
+
+**🛡️ Security by Default**
+- Built-in SSL certificate validation
+- Certificate transparency without manual SSL pinning
+- Enhanced security without complexity
+- Production-ready security features
+
+</td>
+</tr>
+<tr>
+<td>
+
+**🌐 Smart Connectivity**
+- WiFi, Cellular, VPN detection
+- Built-in network connectivity checks
+- Connection type awareness
+- Automatic connectivity validation per API call
+
+</td>
+<td>
+
+**⚠️ Advanced Error Handling**
+- **Custom exceptions** - `ClientHttpException`, `ServerHttpException`, `NoConnectivityException`
+- **Automatic API exception logging** - Structured error tracking
+- **JSON error response parsing** - Extract error codes and messages
+- **Event-based error logging** - Integrated with analytics platforms
+
+</td>
+</tr>
+<tr>
+<td>
+
+**🔍 Built-in Debugging**
+- **Built-in logger support** - Flipper, Chucker, HTTP logging
+- Debug-only features automatically enabled
+- Production-safe logging (auto-disabled in release)
+- Visual network inspection tools
+
+</td>
+<td>
+
+**🧪 Easy Testing**
+- Mock API responses from JSON resources
+- Easy backend API testing without server changes
+- Automatic mock file serving
+- Debug-only mock interceptor
+
+</td>
+</tr>
+</table>
+
+## 🚀 Quick Start
+
+### Installation
+
+Add NetworkingKit to your module's `build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation("com.indiedev:networking-kit:1.0.0")
+}
+```
 
 ### Basic Setup
 
@@ -45,537 +125,442 @@ A comprehensive, production-ready networking library for Android applications bu
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        
-        // Initialize NetworkingKit
+
         val networkingKit = NetworkingKit.builder(this)
-            .gatewayUrls(object : GatewaysBaseUrls {
+            .gatewayUrls(object : GatewayBaseUrls {
                 override fun getMainGatewayUrl() = "https://api.example.com/"
                 override fun getSecureGatewayUrl() = "https://secure.example.com/"
                 override fun getAuthGatewayUrl() = "https://auth.example.com/"
             })
             .build()
-        
-        // Store instance for use in repositories
-        MyApp.networkingKit = networkingKit
+
+        // Store globally or inject via DI
+        NetworkManager.instance = networkingKit
     }
 }
 ```
 
-### Creating API Services
+### Define Your API
 
 ```kotlin
 interface UserApi {
     @GET("users/{id}")
     suspend fun getUser(@Path("id") userId: String): User
-    
+
     @POST("users")
     suspend fun createUser(@Body user: CreateUserRequest): User
 }
-
-// Create service instance
-val userApi = networkingKit.createMainService(UserApi::class.java)
 ```
 
-## Advanced Configuration ⚙️
-
-### With Authentication
+### Create Service & Make Calls
 
 ```kotlin
-class MySessionManager : SessionManager {
-    override fun getAuthToken(): String = // Your stored access token
-    
-    override fun onTokenRefreshed(accessToken: String, refreshToken: String, expiresIn: Long) {
-        // Save new tokens
-    }
-    
-    override fun onTokenExpires() {
-        // Handle token expiration (logout user)
-    }
-    
-    override fun getTokenRefreshConfig(): TokenRefreshConfig<*, *> {
-        return MyTokenRefreshConfig()
+class UserRepository {
+    private val userApi = NetworkManager.instance.createMainService(UserApi::class.java)
+
+    suspend fun getUser(id: String): User? {
+        return try {
+            userApi.getUser(id)
+        } catch (e: ClientHttpException) {
+            // Handle 4xx errors
+            null
+        } catch (e: ServerHttpException) {
+            // Handle 5xx errors
+            null
+        }
     }
 }
 
-// Token refresh service interface
-interface MyTokenRefreshService : TokenRefreshService {
-    @Headers("client-key: your-client-key")
-    @POST("v1/identity/token/renew")
-    suspend fun renewToken(@Body request: RefreshTokenRequest): RefreshTokenResponse
+## ⚙️ Configuration
+
+### Serialization Strategy
+
+NetworkingKit supports both Moshi and Kotlinx Serialization:
+
+```kotlin
+// Use Kotlinx Serialization (default)
+NetworkingKit.builder(context)
+    .gatewayUrls(urls)
+    .serializationStrategy(SerializationStrategy.KOTLINX_SERIALIZATION)
+    .build()
+
+// Use Moshi
+NetworkingKit.builder(context)
+    .gatewayUrls(urls)
+    .serializationStrategy(SerializationStrategy.MOSHI)
+    .build()
+
+// Custom configuration
+val customJson = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = false
 }
 
-class MyTokenRefreshConfig : TokenRefreshConfig<RefreshTokenRequest, RefreshTokenResponse> {
-    override fun getServiceClass(): Class<out TokenRefreshService> = MyTokenRefreshService::class.java
-    
-    override fun createRefreshRequest(): RefreshTokenRequest = 
-        RefreshTokenRequest(refreshToken = getStoredRefreshToken())
-    
-    override fun extractTokens(response: RefreshTokenResponse): AuthTokens =
-        AuthTokens(
-            accessToken = response.accessToken,
-            refreshToken = response.refreshToken,
-            expiresIn = response.expiresIn
-        )
-    
-    override fun isRefreshTokenExpired(exception: HttpException): Boolean = 
-        exception.code() == 401 && exception.message().contains("refresh_token_expired")
-    
-    override fun getRetryCount(): Int = 3
-}
-
-val networkingKit = NetworkingKit.builder(context)
-    .gatewayUrls(gatewayUrls)
-    .sessionManager(MySessionManager())
+NetworkingKit.builder(context)
+    .gatewayUrls(urls)
+    .kotlinxSerializationProvider(customJson)
     .build()
 ```
 
-### With Event Logging
+### Zero-Config Authentication
+
+**No manual token handling required!** NetworkingKit automatically manages access/refresh tokens:
 
 ```kotlin
-class MyEventLogger : NetworkEventLogger {
-    override fun logEvent(eventName: String, properties: HashMap<String, Any>) {
-        // Log to your analytics service
-        analytics.logEvent(eventName, properties)
+class MySessionManager : SessionTokenManager {
+    override fun getAccessToken(): String = prefs.getString("access_token", "")
+
+    override fun onTokenRefreshed(accessToken: String, refreshToken: String, expiresIn: Long) {
+        // NetworkingKit calls this automatically when tokens are refreshed
+        prefs.edit()
+            .putString("access_token", accessToken)
+            .putString("refresh_token", refreshToken)
+            .apply()
+    }
+
+    override fun onTokenExpires() {
+        // Handle logout when refresh token expires
+        navigateToLogin()
+    }
+
+    override fun getTokenRefreshConfig(): TokenRefreshConfig<*, *> {
+        return MyTokenRefreshConfig() // One-time setup
     }
 }
 
-class MyExceptionLogger : NetworkApiExceptionLogger {
-    override fun logException(throwable: Throwable) {
-        crashlytics.recordException(throwable)
+// That's it! NetworkingKit handles everything else automatically:
+// ✅ Adds Bearer tokens to requests
+// ✅ Detects 401 responses
+// ✅ Refreshes tokens automatically
+// ✅ Retries failed requests
+// ✅ Thread-safe token refresh
+```
+
+### Event Logging & Error Tracking
+
+```kotlin
+class MyEventLogger : EventLogger {
+    override fun logEvent(eventName: String, properties: HashMap<String, Any>) {
+        Analytics.logEvent(eventName, properties)
     }
-    
+}
+
+class MyExceptionLogger : ExceptionLogger {
+    override fun logException(throwable: Throwable) {
+        Crashlytics.recordException(throwable)
+    }
+
     override fun logException(throwable: Throwable, customKeys: Map<String, Any>) {
         customKeys.forEach { (key, value) ->
-            crashlytics.setCustomKey(key, value.toString())
+            Crashlytics.setCustomKey(key, value.toString())
         }
-        crashlytics.recordException(throwable)
+        Crashlytics.recordException(throwable)
     }
 }
-
-val networkingKit = NetworkingKit.builder(context)
-    .gatewayUrls(gatewayUrls)
-    .eventLogger(MyEventLogger())
-    .exceptionLogger(MyExceptionLogger())
-    .build()
 ```
 
-### With Certificate Transparency
+### Certificate Transparency
 
 ```kotlin
-class MyCertTransparencyProvider : CertTransparencyFlagProvider {
+class CertTransparencyProvider : CertTransparencyConfig {
     override fun isFlagEnable(): Boolean = BuildConfig.ENABLE_CERT_TRANSPARENCY
 }
-
-val networkingKit = NetworkingKit.builder(context)
-    .gatewayUrls(gatewayUrls)
-    .certTransparencyProvider(MyCertTransparencyProvider())
-    .build()
 ```
 
-## API Usage Examples 📖
+## 📖 Usage Examples
 
-### Using Safe API Calls
+### API Error Handling
 
 ```kotlin
 class UserRepository(private val userApi: UserApi) {
-    
-    suspend fun getUser(userId: String): Result<User> {
-        return safeApiCall {
+
+    suspend fun getUser(userId: String): User? {
+        return try {
             userApi.getUser(userId)
+        } catch (exception: Exception) {
+            handleError(exception)
+            null
         }
     }
-    
-    suspend fun handleUserRequest(userId: String) {
-        when (val result = getUser(userId)) {
-            is Result.Success -> {
-                val user = result.data
-                // Handle success
-            }
-            is Result.Error -> {
-                val exception = result.exception
-                // Handle error
-            }
-            is Result.Loading -> {
-                // Show loading state
-            }
-        }
-    }
-}
-```
 
-### Error Handling
-
-```kotlin
-suspend fun handleApiCall() {
-    val result = safeApiCall { userApi.getUser("123") }
-    
-    when (result) {
-        is Result.Success -> {
-            val user = result.data
-            // Success
-        }
-        is Result.Error -> {
-            when (val exception = result.exception) {
-                is ClientHttpException -> {
-                    // Handle 4xx errors
-                    val errorCode = exception.errorCode() // Custom error code from JSON
-                    val message = exception.message() // Parsed error message
-                    val httpCode = exception.code() // HTTP status code
-                }
-                is ServerHttpException -> {
-                    // Handle 5xx errors
-                }
-                is NoConnectivityException -> {
-                    // Handle no network connection
-                }
-                is NoInternetException -> {
-                    // Handle no internet access
-                }
+    private fun handleError(exception: Throwable) {
+        when (exception) {
+            is ClientHttpException -> {
+                // Handle 4xx errors
+                val errorCode = exception.errorCode()
+                val httpCode = exception.code()
+                Log.e("API", "Client error: $errorCode")
+            }
+            is ServerHttpException -> {
+                // Handle 5xx errors
+                Log.e("API", "Server error: ${exception.code()}")
+            }
+            is NoConnectivityException -> {
+                // Handle no network
+                Log.e("API", "No network connection")
+            }
+            else -> {
+                Log.e("API", "Unknown error", exception)
             }
         }
     }
 }
 ```
 
-### Using Different Gateways
+### Enterprise Multi-Gateway Usage
 
 ```kotlin
-// Main gateway (default)
-val mainApi = networkingKit.createMainService(MainApi::class.java)
+class ApiRepository {
+    // Enterprise-grade gateway separation for different security requirements
+    private val mainApi = networkingKit.createMainService(MainApi::class.java)           // Standard operations
+    private val secureApi = networkingKit.createSecureService(SecureApi::class.java)     // Card transactions
+    private val authApi = networkingKit.createAuthService(AuthApi::class.java)           // Authentication
 
-// Secure gateway for sensitive operations  
-val secureApi = networkingKit.createSecureService(SecureApi::class.java)
+    // Main Gateway - Standard business operations
+    suspend fun getUserProfile() = try { mainApi.getProfile() } catch (e: Exception) { null }
+    suspend fun getProductCatalog() = try { mainApi.getProducts() } catch (e: Exception) { null }
 
-// Auth gateway for authentication
-val authApi = networkingKit.createAuthService(AuthApi::class.java)
+    // Secure Gateway - Financial transactions & sensitive data
+    suspend fun processPayment(card: CardDetails) = try { secureApi.processPayment(card) } catch (e: Exception) { null }
+    suspend fun getTransactionHistory() = try { secureApi.getTransactions() } catch (e: Exception) { null }
+
+    // Auth Gateway - Token management
+    suspend fun refreshToken() = try { authApi.refreshToken() } catch (e: Exception) { null }
+    suspend fun validateSession() = try { authApi.validateSession() } catch (e: Exception) { null }
+}
 ```
 
-## Caching 💾
+## 💾 Universal API Caching
 
-### Custom Cache Control
-
-Add custom headers to control caching behavior:
+**No Room DB Required!** Cache any HTTP method with simple headers:
 
 ```kotlin
 interface ApiService {
-    @Headers(
-        "Cache-Duration: 5",
-        "Cache-Unit: MINUTES"
-    )
-    @GET("data")
-    suspend fun getCachedData(): ApiResponse
-    
-    @Headers(
-        "Cache-Duration: 1", 
-        "Cache-Unit: HOURS"
-    )
-    @GET("profile")
+    @Headers("Cache-Duration: 5", "Cache-Unit: MINUTES")
+    @GET("users/profile")
     suspend fun getProfile(): UserProfile
+
+    @Headers("Cache-Duration: 30", "Cache-Unit: SECONDS")
+    @POST("users/search")
+    suspend fun searchUsers(@Body query: SearchQuery): List<User>
+
+    @Headers("Cache-Duration: 1", "Cache-Unit: HOURS")
+    @PUT("users/settings")
+    suspend fun updateSettings(@Body settings: UserSettings): Result
 }
 ```
 
-Supported cache units (from `TimeUnit`):
-- `SECONDS`
-- `MINUTES` 
-- `HOURS`
-- `DAYS`
+**Benefits:**
+- ✅ Cache GET, POST, PUT, PATCH responses
+- ✅ Reduce server load and improve performance
+- ✅ Works offline automatically
+- ✅ No database setup or entity classes needed
 
-The cache interceptor automatically applies cache control headers for successful responses (2xx) when these headers are present.
+**Supported units:** `SECONDS`, `MINUTES`, `HOURS`, `DAYS`
 
-## Mocking for Development 🧪
+## 🧪 Development & Testing
 
-### Setup Mock Responses (Debug builds only)
+### API Mocking (Debug builds only)
 
-1. Create JSON files in `src/main/res/raw/`:
+1. **Create JSON files** in `src/main/res/raw/`:
    ```
    res/raw/users_profile.json
    res/raw/api_data.json
    ```
 
-2. Use mock URLs in your API calls:
+2. **Add mock endpoints**:
    ```kotlin
    @GET("users/profile/mock")
    suspend fun getProfile(): Profile
    ```
 
-3. The MockInterceptor automatically serves the corresponding JSON file.
+3. **Automatic serving**: MockInterceptor serves the corresponding JSON file
 
-### Mock File Naming Convention
+**File naming:** `/api/users/123/mock` → `api_users.json`
 
-The MockInterceptor processes URLs to generate file names:
+### Enterprise Debugging Tools
 
-- URL: `/api/users/123/mock` → File: `api_users.json`
-- Removes numeric segments (`123`)
-- Takes last 2 path segments (`api`, `users`)
-- Joins with underscore (`api_users`)
-- Removes "mock" suffix
-- Looks in `res/raw/` for the file
-
-### Mock Response Format
-
-Mock responses are automatically GZIP compressed and returned with:
-- HTTP 200 status
-- `application/json` content type
-- `gzip` encoding
-
-## Debugging 🔍
-
-### Automatic Debug Features (Debug builds only)
-
-NetworkingKit automatically enables debugging features in debug builds:
-
-1. **HTTP Logging**: Full request/response logging with `HttpLoggingInterceptor`
-2. **Chucker**: Visual network inspector via notification
-3. **Flipper**: Facebook's debugging tools (if available)
-4. **Mock Interceptor**: API mocking from raw resources
-
-### View Network Traffic
-
-- **Logcat**: Filter by "OkHttp" tag for HTTP logs
-- **Chucker**: Install debug APK → Check notification drawer → Tap "Chucker"
-- **Flipper**: Use Flipper desktop app with network plugin
-
-## Security 🔒
-
-### Certificate Transparency
-
-Certificate Transparency is automatically configured when enabled:
+NetworkingKit provides built-in support for enterprise debugging tools:
 
 ```kotlin
-// In your app's configuration
-class AppCertTransparencyProvider : CertTransparencyFlagProvider {
+// Automatic integration - no additional setup required
+val networkingKit = NetworkingKit.builder(context)
+    .gatewayUrls(urls)
+    .build()
+
+// Debug builds automatically enable:
+// ✅ Flipper - Facebook's debugging platform
+// ✅ Chucker - Visual network inspector
+// ✅ HTTP Logging - Detailed request/response logs
+// ✅ Mock interceptor - JSON-based API mocking
+```
+
+**Features:**
+- **Production-safe** - All debug features auto-disabled in release builds
+- **Zero configuration** - Works out of the box
+- **Multiple loggers** - Flipper, Chucker, and HTTP logging simultaneously
+- **Visual inspection** - See all network traffic in real-time
+
+## 🔒 Security Features
+
+### Certificate Transparency
+When enabled, NetworkingKit validates certificates against CT logs and pins gateway URLs:
+
+```kotlin
+class AppCertTransparencyProvider : CertTransparencyConfig {
     override fun isFlagEnable(): Boolean = BuildConfig.ENABLE_CERT_PINNING
 }
 ```
 
-When enabled, the library:
-- Validates certificates against CT logs
-- Pins gateway URLs for enhanced security
-- Uses Google's CT log list service
+## 📚 Error Handling Reference
 
-## Error Types Reference 📚
+### Exception Types
 
-| Exception Type | Description | HTTP Codes | Usage |
-|---|---|---|---|
-| `ClientHttpException` | Client-side errors | 400-499 | Invalid requests, auth errors |
-| `ServerHttpException` | Server-side errors | 500-599 | Server issues, maintenance |
-| `NoConnectivityException` | No network connection | N/A | Device offline |
-| `NoInternetException` | Connected but no internet | N/A | Captive portal, DNS issues |
+| Exception | Description | Codes |
+|-----------|-------------|--------|
+| `ClientHttpException` | Client errors | 400-499 |
+| `ServerHttpException` | Server errors | 500-599 |
+| `NoConnectivityException` | No network | - |
+| `NoInternetException` | No internet access | - |
 
-### Error JSON Parsing
+### Error Response Parsing
 
-The library automatically parses error responses with this structure:
+NetworkingKit automatically parses JSON error responses:
 
 ```json
 {
   "message": "User not found",
-  "code": "USER_404",
-  "errors": ["Alternative error message"]
+  "code": "USER_404"
 }
 ```
 
-Or alternative format:
-```json
-{
-  "message": "Invalid request",
-  "error_code": "VALIDATION_ERROR"
-}
-```
-
-Access parsed values:
 ```kotlin
+// Access parsed error details
 val exception = result.exception as ClientHttpException
-val errorCode = exception.errorCode()  // "USER_404" or null
+val errorCode = exception.errorCode()  // "USER_404"
 val message = exception.message()      // "User not found"
 val httpCode = exception.code()        // 404
 ```
 
-## Advanced Usage 🔧
+## 🏗️ Architecture Patterns
 
-### Flow-based API Calls
-
-```kotlin
-class UserRepository(private val userApi: UserApi) {
-    
-    fun getUserFlow(userId: String): Flow<Result<User>> = flow {
-        emit(userApi.getUser(userId))
-    }.asResult()
-    
-    suspend fun observeUser(userId: String) {
-        getUserFlow(userId).collect { result ->
-            when (result) {
-                is Result.Loading -> showLoading()
-                is Result.Success -> showUser(result.data)
-                is Result.Error -> showError(result.exception)
-            }
-        }
-    }
-}
-```
-
-### Custom Error Handling
+### Repository Pattern with Dependency Injection
 
 ```kotlin
-// Extension functions for error classification
-fun Throwable.isNetworkError(): Boolean = this is IOException
-fun Throwable.isServerError(): Boolean = this is ServerHttpException
-fun Throwable.isClientError(): Boolean = this is ClientHttpException
-
-// Usage
-when {
-    exception.isNetworkError() -> showNetworkError()
-    exception.isServerError() -> showServerError()
-    exception.isClientError() -> showValidationError()
-}
-```
-
-## Testing 🧪
-
-### Unit Testing with MockWebServer
-
-```kotlin
-class UserRepositoryTest {
-    private lateinit var mockWebServer: MockWebServer
-    private lateinit var networkingKit: NetworkingKit
-    private lateinit var userApi: UserApi
-    
-    @Before
-    fun setup() {
-        mockWebServer = MockWebServer()
-        
-        networkingKit = NetworkingKit.builder(context)
-            .gatewayUrls(object : GatewaysBaseUrls {
-                override fun getMainGatewayUrl() = mockWebServer.url("/").toString()
-                override fun getSecureGatewayUrl() = ""
-                override fun getAuthGatewayUrl() = ""
-            })
-            .build()
-            
-        userApi = networkingKit.createMainService(UserApi::class.java)
-    }
-    
-    @Test
-    fun `getUser returns success`() = runTest {
-        // Given
-        mockWebServer.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("""{"id": "123", "name": "John"}""")
-        )
-        
-        // When
-        val result = safeApiCall { userApi.getUser("123") }
-        
-        // Then
-        assertTrue(result is Result.Success)
-        assertEquals("123", (result as Result.Success).data.id)
-    }
-    
-    @After
-    fun tearDown() {
-        mockWebServer.shutdown()
-    }
-}
-```
-
-## Migration Guide 🔄
-
-### From OkHttp + Retrofit
-
-```kotlin
-// Before
-val okHttpClient = OkHttpClient.Builder()
-    .addInterceptor(AuthInterceptor())
-    .connectTimeout(30, TimeUnit.SECONDS)
-    .readTimeout(60, TimeUnit.SECONDS)
-    .build()
-
-val retrofit = Retrofit.Builder()
-    .baseUrl("https://api.example.com/")
-    .client(okHttpClient)
-    .addConverterFactory(GsonConverterFactory.create())
-    .build()
-
-val api = retrofit.create(ApiService::class.java)
-
-// After  
-val networkingKit = NetworkingKit.builder(context)
-    .gatewayUrls(object : GatewaysBaseUrls {
-        override fun getMainGatewayUrl() = "https://api.example.com/"
-    })
-    .sessionManager(sessionManager)
-    .build()
-
-val api = networkingKit.createMainService(ApiService::class.java)
-```
-
-### Key Changes
-- Builder pattern with method chaining
-- Automatic timeout configuration (70s read/write, 30s connect)
-- Built-in authentication with automatic token refresh
-- Kotlinx Serialization instead of Gson
-- Comprehensive error handling with custom exceptions
-- Built-in debug tools (Chucker, Flipper, HTTP logging)
-
-## Performance Tips 🚀
-
-1. **Use appropriate gateways**: Route sensitive calls through secure gateway
-2. **Leverage caching**: Add `Cache-Duration` and `Cache-Unit` headers to reduce network calls
-3. **Handle errors gracefully**: Use `safeApiCall` wrapper for consistent error handling
-4. **Monitor token refresh**: Use event logging to track authentication issues
-5. **Use Flow for reactive data**: Combine with `asResult()` for loading states
-6. **Debug builds optimization**: Debug features are automatically disabled in release builds
-
-## Best Practices 📋
-
-### Repository Pattern
-
-```kotlin
-class UserRepository(
-    private val networkingKit: NetworkingKit
-) {
-    private val userApi = networkingKit.createMainService(UserApi::class.java)
-    private val secureUserApi = networkingKit.createSecureService(SecureUserApi::class.java)
-    
-    suspend fun getUser(userId: String): Result<User> = safeApiCall {
-        userApi.getUser(userId)
-    }
-    
-    suspend fun updateSensitiveData(data: SensitiveData): Result<Unit> = safeApiCall {
-        secureUserApi.updateData(data)
-    }
-}
-```
-
-### Dependency Injection
-
-```kotlin
-// With Hilt
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    
+
     @Provides
     @Singleton
     fun provideNetworkingKit(@ApplicationContext context: Context): NetworkingKit {
         return NetworkingKit.builder(context)
             .gatewayUrls(AppGatewayUrls())
             .sessionManager(AppSessionManager())
+            .eventLogger(AppEventLogger())
             .build()
     }
-    
+
     @Provides
-    fun provideUserApi(networkingKit: NetworkingKit): UserApi {
-        return networkingKit.createMainService(UserApi::class.java)
+    fun provideUserApi(networkingKit: NetworkingKit): UserApi =
+        networkingKit.createMainService(UserApi::class.java)
+}
+
+class UserRepository @Inject constructor(
+    private val userApi: UserApi
+) {
+    suspend fun getUser(id: String): User? = try {
+        userApi.getUser(id)
+    } catch (e: Exception) {
+        Log.e("UserRepository", "Failed to get user", e)
+        null
     }
 }
 ```
 
-## License 📄
+### Flow-based Reactive APIs
+
+```kotlin
+class UserRepository(private val userApi: UserApi) {
+
+    fun getUserFlow(userId: String): Flow<User?> = flow {
+        try {
+            emit(userApi.getUser(userId))
+        } catch (e: Exception) {
+            emit(null)
+        }
+    }
+
+    fun observeUsers(): Flow<List<User>?> = flow {
+        while (true) {
+            try {
+                emit(userApi.getUsers())
+            } catch (e: Exception) {
+                emit(null)
+            }
+            delay(30.seconds)
+        }
+    }
+}
+
+## 🧪 Testing
+
+### Unit Testing with MockWebServer
+
+```kotlin
+@Test
+fun `getUser returns success`() = runTest {
+    // Setup
+    val mockWebServer = MockWebServer()
+    val networkingKit = NetworkingKit.builder(context)
+        .gatewayUrls(object : GatewayBaseUrls {
+            override fun getMainGatewayUrl() = mockWebServer.url("/").toString()
+            override fun getSecureGatewayUrl() = ""
+            override fun getAuthGatewayUrl() = ""
+        })
+        .build()
+
+    val userApi = networkingKit.createMainService(UserApi::class.java)
+
+    // Given
+    mockWebServer.enqueue(
+        MockResponse()
+            .setResponseCode(200)
+            .setBody("""{"id": "123", "name": "John"}""")
+    )
+
+    // When
+    val user = userApi.getUser("123")
+
+    // Then
+    assertNotNull(user)
+    assertEquals("123", user.id)
+
+    mockWebServer.shutdown()
+}
+```
+
+## 📋 Best Practices
+
+### Performance Optimization
+- **Gateway Selection**: Use appropriate gateways for different security levels
+- **Smart Caching**: Add cache headers to reduce network calls
+- **Error Handling**: Always wrap API calls in try-catch blocks
+- **Flow Integration**: Use reactive streams for real-time data updates
+
+### Architecture Guidelines
+- **Repository Pattern**: Encapsulate API calls in repository classes
+- **Dependency Injection**: Use Hilt or similar for clean architecture
+- **Error Recovery**: Implement proper retry logic for network failures
+- **Security**: Enable certificate transparency in production builds
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+## 📄 License
 
 ```
-Copyright 2024 IndieDevTools
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -592,5 +577,11 @@ limitations under the License.
 ---
 
 <div align="center">
-Built with ❤️ by IndieDevTools
+
+[![Made with ❤️ by IndieDevTools](https://img.shields.io/badge/Made%20with%20❤️%20by-IndieDevTools-red.svg)](https://github.com/indiedevtools)
+
+**NetworkingKit** • Modern Android Networking Made Simple
+
+[⭐ Star on GitHub](https://github.com/indiedevtools/networkingkit) • [📖 Documentation](https://docs.networkingkit.dev) • [🐛 Report Bug](https://github.com/indiedevtools/networkingkit/issues)
+
 </div>
