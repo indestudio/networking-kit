@@ -82,3 +82,7 @@ fastlane/test_output
 # Kotlin/Java build cache
 .kotlinc/
 .kts/
+
+# Publishing credentials (keep secure)
+github.properties
+gradle.properties.local

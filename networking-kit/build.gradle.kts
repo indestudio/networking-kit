@@ -9,6 +9,8 @@ plugins {
     alias(libs.plugins.detekt)
 }
 
+apply(from = "publish.gradle.kts")
+
 android {
     namespace = "com.indiedev.networking"
     compileSdk = 36
