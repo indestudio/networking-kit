@@ -346,7 +346,7 @@ class NetworkingKit private constructor(
             }
 
             // Add cache network interceptor last
-            builder.addNetworkInterceptor(CacheInterceptor(context))
+            builder.addInterceptor(CacheInterceptor(context))
 
             return builder.build()
         }

@@ -26,7 +26,11 @@ class CacheInterceptor(context: Context) : Interceptor {
         } else {
             // No cache annotation - proceed with network request
             logWithDebugMode("network call -- ${request.url}")
-            chain.proceed(request)
+            val response = chain.proceed(request)
+            // Add network source header for non-cached requests
+            response.newBuilder()
+                .addHeader("X-Cache-Source", "network")
+                .build()
         }
     }
 
@@ -55,9 +59,13 @@ class CacheInterceptor(context: Context) : Interceptor {
 
 
     private fun cacheResponse(response: Response, cacheKey: String, cacheConfig: AnnotationCacheRegistry.CacheConfig) {
-        try {
+         try {
             val responseBody = response.body ?: return
-            val bodyBytes = responseBody.bytes()
+            // Create a copy of the response body to avoid consuming the original
+            val source = responseBody.source()
+            source.request(Long.MAX_VALUE) // Buffer the entire body
+            val buffer = source.buffer.clone()
+            val bodyBytes = buffer.readByteArray()
 
             val headers = response.headers.toMultimap().mapValues { it.value.joinToString(", ") }
             val contentType = responseBody.contentType()?.toString() ?: "application/octet-stream"
@@ -92,6 +100,9 @@ class CacheInterceptor(context: Context) : Interceptor {
         cacheEntry.headers.forEach { (name, value) ->
             responseBuilder.addHeader(name, value)
         }
+
+        // Add cache source header
+        responseBuilder.addHeader("X-Cache-Source", "cache")
 
         return responseBuilder.build()
     }
