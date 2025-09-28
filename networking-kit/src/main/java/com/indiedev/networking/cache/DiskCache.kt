@@ -9,7 +9,6 @@ import okio.ByteString.Companion.encodeUtf8
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Disk-based cache for HTTP responses
@@ -17,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class DiskCache(
     context: Context,
-    maxSize: Long = 10 * 1024 * 1024 // 50MB default (unused for simplicity)
+    maxSize: Long = 15 * 1024 * 1024 // 50MB default (unused for simplicity)
 ) {
     private val tag = "DiskCache"
     private val cacheDir = File(context.cacheDir, "http_cache")
