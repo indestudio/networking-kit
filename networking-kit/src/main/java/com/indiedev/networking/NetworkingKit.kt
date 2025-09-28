@@ -14,6 +14,7 @@ import com.indiedev.networking.interceptor.CacheInterceptor
 import com.indiedev.networking.interceptors.DefaultHeadersInterceptor
 import com.indiedev.networking.interceptors.MockResponseInterceptor
 import com.indiedev.networking.interceptors.NoConnectionInterceptor
+import com.indiedev.networking.serialization.*
 import com.indiedev.networking.token.AccessTokenProvider
 import com.indiedev.networking.utils.AppVersionProviderImp
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -59,6 +60,8 @@ class NetworkingKit private constructor(
         private var eventLogger: EventLogger? = null
         private var exceptionLogger: ExceptionLogger? = null
         private var certTransparencyProvider: CertTransparencyConfig? = null
+        private var serializationStrategy: SerializationStrategy = SerializationStrategy.KOTLINX_SERIALIZATION
+        private var serializationProvider: SerializationProvider? = null
 
         private val readTimeoutSeconds = 70L
         private val writeTimeoutSeconds = 70L
@@ -88,6 +91,14 @@ class NetworkingKit private constructor(
 
         fun certTransparencyProvider(provider: CertTransparencyConfig) = apply {
             this.certTransparencyProvider = provider
+        }
+
+        fun serializationStrategy(strategy: SerializationStrategy) = apply {
+            this.serializationStrategy = strategy
+        }
+
+        fun customSerializationProvider(provider: SerializationProvider) = apply {
+            this.serializationProvider = provider
         }
 
         /**
@@ -134,8 +145,11 @@ class NetworkingKit private constructor(
                 urls
             )
 
+            // Get serialization provider
+            val finalSerializationProvider = getSerializationProvider()
+
             // Create authenticator with auth retrofit
-            val authRetrofit = createRetrofit(urls.getAuthGatewayUrl(), authOkHttpClient)
+            val authRetrofit = createRetrofit(urls.getAuthGatewayUrl(), authOkHttpClient, finalSerializationProvider)
             val authenticator = createAuthenticator(session, eventsHelper, authRetrofit)
 
             // Add authenticator to main and secure clients
@@ -145,8 +159,8 @@ class NetworkingKit private constructor(
                 secureOkHttpClient.newBuilder().authenticator(authenticator).build()
 
             // Create final Retrofit instances
-            val mainRetrofit = createRetrofit(urls.getMainGatewayUrl(), mainClientWithAuth)
-            val secureRetrofit = createRetrofit(urls.getSecureGatewayUrl(), secureClientWithAuth)
+            val mainRetrofit = createRetrofit(urls.getMainGatewayUrl(), mainClientWithAuth, finalSerializationProvider)
+            val secureRetrofit = createRetrofit(urls.getSecureGatewayUrl(), secureClientWithAuth, finalSerializationProvider)
 
             return NetworkingKit(mainRetrofit, secureRetrofit, authRetrofit)
         }
@@ -354,33 +368,24 @@ class NetworkingKit private constructor(
         /**
          * Create Retrofit instance for specific gateway
          */
-        private fun createRetrofit(baseUrl: String, okHttpClient: OkHttpClient): Retrofit? {
-
+        private fun createRetrofit(baseUrl: String, okHttpClient: OkHttpClient, serializationProvider: SerializationProvider): Retrofit? {
             if(baseUrl.isBlank()) return null
-
-
-//            val moshi = Moshi.Builder()
-//                .add(KotlinJsonAdapterFactory())
-//                .add(MoshiArrayListJsonAdapter.FACTORY)
-//                .add(FallbackEnum.ADAPTER_FACTORY)
-//                .build()
-//
-//            return Retrofit.Builder()
-//                .baseUrl(baseUrl)
-//                .client(okHttpClient)
-//                .addConverterFactory(MoshiConverterFactory.create(moshi))
-//                .build()
-
-            val json = Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            }
 
             return Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .client(okHttpClient)
-                .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+                .addConverterFactory(serializationProvider.createConverterFactory())
                 .build()
+        }
+
+        /**
+         * Get the appropriate serialization provider based on strategy
+         */
+        private fun getSerializationProvider(): SerializationProvider {
+            return serializationProvider ?: when (serializationStrategy) {
+                SerializationStrategy.MOSHI -> MoshiSerializationProvider()
+                SerializationStrategy.KOTLINX_SERIALIZATION -> KotlinxSerializationProvider()
+            }
         }
 
         /**
