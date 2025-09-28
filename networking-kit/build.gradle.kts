@@ -7,9 +7,8 @@ plugins {
     alias(libs.plugins.ksp)   // ✅ For Hilt
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    id("maven-publish")
 }
-
-apply(from = "publish.gradle.kts")
 
 android {
     namespace = "com.indiedev.networking"
@@ -41,6 +40,34 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+    }
+}
+
+configure<PublishingExtension> {
+    publications {
+        // You can register the publications using a lambda with 'register'
+        register<MavenPublication>("release") {
+            groupId = "com.indiedev"
+            artifactId = "networkingKit-release"
+            version = "1.0.0"
+
+            // Use the afterEvaluate block for Android components
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+
+        // It is generally recommended to only publish the 'release' variant on JitPack.
+        // Publishing 'debug' variants is usually unnecessary for public libraries.
+        register<MavenPublication>("debug") {
+            groupId = "com.indiedev"
+            artifactId = "networkingKit-debug"
+            version = "1.0.0"
+
+            afterEvaluate {
+                from(components["debug"])
+            }
+        }
     }
 }
 
