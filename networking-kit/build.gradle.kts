@@ -51,17 +51,28 @@ configure<PublishingExtension> {
             afterEvaluate {
                 from(components["release"])
             }
+
+            groupId = "com.github.indestudio"
+            artifactId = "networkingKit-release"
+            version = "1.0.0"
         }
 
         // It is generally recommended to only publish the 'release' variant on JitPack.
         // Publishing 'debug' variants is usually unnecessary for public libraries.
         register<MavenPublication>("debug") {
+
             afterEvaluate {
                 from(components["debug"])
             }
+
+            groupId = "com.github.indestudio"
+            artifactId = "networkingKit-debug"
+            version = "1.0.0"
         }
     }
 }
+
+
 
 dependencies {
     implementation(libs.retrofit) {
