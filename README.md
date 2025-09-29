@@ -25,87 +25,52 @@
 
 ## ✨ Core Features
 
-<table>
-<tr>
-<td>
-
-**🏢 Multi-Gateway Architecture**
+### 🏢 Multi-Gateway Architecture
 - **Main Gateway** - Standard API operations
 - **Secure Gateway** - Card transactions & sensitive operations
 - **Auth Gateway** - Authentication & token management
 
-</td>
-<td>
-
-**🔐 Zero Auth Complexity**
+### 🔐 Zero Auth Complexity
 - Automatic access/refresh token management
 - Thread-safe session management
 - No manual token handling required in app
 - Built-in retry logic for auth failures
 
-</td>
-</tr>
-<tr>
-<td>
-
-**💾 Universal Caching (No DB Needed)**
+### 💾 Universal Caching (No DB Needed)
 - Cache any API response (GET, POST, PUT, PATCH)
 - Custom cache duration via headers
 - No Room DB dependency needed
 - Intelligent cache management
 
-</td>
-<td>
-
-**🛡️ Security by Default**
+### 🛡️ Security by Default
 - Built-in SSL certificate validation
 - Certificate transparency without manual SSL pinning
 - Enhanced security without complexity
 - Production-ready security features
 
-</td>
-</tr>
-<tr>
-<td>
-
-**🌐 Smart Connectivity**
+### 🌐 Smart Connectivity
 - WiFi, Cellular, VPN detection
 - Built-in network connectivity checks
 - Connection type awareness
 - Automatic connectivity validation per API call
 
-</td>
-<td>
-
-**⚠️ Advanced Error Handling**
+### ⚠️ Advanced Error Handling
 - **Custom exceptions** - `ClientHttpException`, `ServerHttpException`, `NoConnectivityException`
 - **Automatic API exception logging** - Structured error tracking
 - **JSON error response parsing** - Extract error codes and messages
 - **Event-based error logging** - Integrated with analytics platforms
 
-</td>
-</tr>
-<tr>
-<td>
-
-**🔍 Built-in Debugging**
+### 🔍 Built-in Debugging
 - **Built-in logger support** - Flipper, Chucker, HTTP logging
 - Debug-only features automatically enabled
 - Production-safe logging (auto-disabled in release)
 - Visual network inspection tools
 
-</td>
-<td>
-
-**🧪 Easy Testing**
+### 🧪 Easy Testing
 - Mock API responses from JSON resources
 - Easy backend API testing without server changes
 - Automatic mock file serving
 - Debug-only mock interceptor
-
-</td>
-</tr>
-</table>
 
 ## 🚀 Quick Start
 
@@ -116,16 +81,16 @@ Add NetworkingKit to your module's `build.gradle.kts`:
 #### Gradle (Kotlin DSL)
 ```kotlin
 dependencies {
-    releaseImplementation("com.indiedev:networking-kit-release:1.0.0")
-    debugImplementation("com.indiedev:networking-kit-debug:1.0.0")
+    releaseImplementation("com.github.indestudio:networkingKit-release:1.0.0")
+    debugImplementation("com.github.indestudio:networkingKit-debug:1.0.0")
 }
 ```
 
 #### Gradle (Groovy)
 ```groovy
 dependencies {
-    releaseImplementation 'com.indiedev:networking-kit-release:1.0.0'
-    debugImplementation 'com.indiedev:networking-kit-debug:1.0.0'
+    releaseImplementation 'com.indiedev:networkingKit-release:1.0.0'
+    debugImplementation 'com.indiedev:networkingKit-debug:1.0.0'
 }
 ```
 
