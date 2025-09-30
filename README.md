@@ -94,24 +94,6 @@ dependencies {
 }
 ```
 
-#### Maven
-```xml
-<!-- Release variant -->
-<dependency>
-  <groupId>com.indiedev</groupId>
-  <artifactId>networking-kit-release</artifactId>
-  <version>1.0.0</version>
-</dependency>
-
-<!-- Debug variant -->
-<dependency>
-  <groupId>com.indiedev</groupId>
-  <artifactId>networking-kit-debug</artifactId>
-  <version>1.0.0</version>
-  <scope>test</scope>
-</dependency>
-```
-
 > **Note**: The debug variant includes Flipper, Chucker, and additional logging tools for development. Use the release variant for production builds.
 
 ### Basic Setup
