@@ -53,7 +53,7 @@ configure<PublishingExtension> {
             }
 
             groupId = "com.github.indestudio"
-            artifactId = "networkingKit-release"
+            artifactId = "release"
             version = "1.0.0"
         }
 
@@ -66,7 +66,7 @@ configure<PublishingExtension> {
             }
 
             groupId = "com.github.indestudio"
-            artifactId = "networkingKit-debug"
+            artifactId = "debug"
             version = "1.0.0"
         }
     }
