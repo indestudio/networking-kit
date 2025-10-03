@@ -76,21 +76,53 @@
 
 ### Installation
 
-Add NetworkingKit to your module's `build.gradle.kts`:
+#### Step 1: Add JitPack repository
 
-#### Gradle (Kotlin DSL)
+Add JitPack to your `settings.gradle.kts`:
+
 ```kotlin
-dependencies {
-    releaseImplementation("com.github.indestudio:networkingKit-release:1.0.0")
-    debugImplementation("com.github.indestudio:networkingKit-debug:1.0.0")
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url = uri("https://jitpack.io")
+        }
+    }
 }
 ```
 
-#### Gradle (Groovy)
+Or if using `settings.gradle`:
+
+```groovy
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+#### Step 2: Add NetworkingKit dependency
+
+Add NetworkingKit to your module's `build.gradle.kts`:
+
+##### Gradle (Kotlin DSL)
+```kotlin
+dependencies {
+   debugImplementation("com.github.indestudio.networking-kit:debug:1.0.0")
+   releaseImplementation("com.github.indestudio.networking-kit:release:1.0.0")
+}
+```
+
+##### Gradle (Groovy)
 ```groovy
 dependencies {
-    releaseImplementation 'com.indiedev:networkingKit-release:1.0.0'
-    debugImplementation 'com.indiedev:networkingKit-debug:1.0.0'
+    releaseImplementation 'com.github.indestudio.networking-kit:debug:1.0.0'
+    debugImplementation 'com.github.indestudio.networking-kit:release:1.0.0'
 }
 ```
 
