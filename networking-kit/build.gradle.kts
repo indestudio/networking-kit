@@ -45,7 +45,6 @@ android {
 
 configure<PublishingExtension> {
     publications {
-        // You can register the publications using a lambda with 'register'
         register<MavenPublication>("release") {
             // Use the afterEvaluate block for Android components
             afterEvaluate {
@@ -57,8 +56,6 @@ configure<PublishingExtension> {
             version = "1.0.0"
         }
 
-        // It is generally recommended to only publish the 'release' variant on JitPack.
-        // Publishing 'debug' variants is usually unnecessary for public libraries.
         register<MavenPublication>("debug") {
 
             afterEvaluate {
