@@ -173,6 +173,8 @@ object NetworkingModule {
 }
 ```
 
+
+
 ## ⚙️ Configuration
 
 ### Change Serialization or Json Mapping Strategy
@@ -236,6 +238,36 @@ interface UserApi {
 ```
 
 **Supported TimeUnits:** `SECONDS`, `MINUTES`, `HOURS`, `DAYS`
+
+### Easy API Mocking (Debug builds only)
+
+Mock API responses using the `@MockResponse` annotation:
+
+```kotlin
+import com.indiedev.networking.annotations.MockResponse
+
+interface UserApi {
+    // Auto-loads from res/raw/users_list.json
+    @GET("users")
+    @MockResponse("users_list")
+    suspend fun getUsers(): List<User>
+
+    // Custom status code and delay
+    @POST("login")
+    @MockResponse(resourceName = "login_success", statusCode = 200, delay = 1000)
+    suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    // Simulate error response
+    @GET("users/{id}")
+    @MockResponse(resourceName = "user_not_found", statusCode = 404)
+    suspend fun getUser(@Path("id") id: String): User
+}
+```
+
+**How it works:**
+1. Create JSON files in `res/raw/` (e.g., `users_list.json`, `login_success.json`)
+2. Add `@MockResponse` annotation to your API methods
+3. Mock responses are automatically served in debug builds only
 
 ### Zero-Config Authentication
 
