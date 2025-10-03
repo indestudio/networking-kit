@@ -128,28 +128,9 @@ dependencies {
 
 > **Note**: The debug variant includes Flipper, Chucker, and additional logging tools for development. Use the release variant for production builds.
 
-### Basic Setup
+### Easy Setup
 
-```kotlin
-class MyApplication : Application() {
-    override fun onCreate() {
-        super.onCreate()
-
-        val networkingKit = NetworkingKit.builder(this)
-            .gatewayUrls(object : GatewayBaseUrls {
-                override fun getMainGatewayUrl() = "https://api.example.com/"
-                override fun getSecureGatewayUrl() = "https://secure.example.com/"
-                override fun getAuthGatewayUrl() = "https://auth.example.com/"
-            })
-            .build()
-
-        // Store globally or inject via DI
-        NetworkManager.instance = networkingKit
-    }
-}
-```
-
-### Define Your API
+### Your Retrofit interface 
 
 ```kotlin
 interface UserApi {
@@ -161,30 +142,42 @@ interface UserApi {
 }
 ```
 
-### Create Service & Make Calls
+#### Using Hilt
 
 ```kotlin
-class UserRepository {
-    private val userApi = NetworkManager.instance.createMainService(UserApi::class.java)
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkingModule {
 
-    suspend fun getUser(id: String): User? {
-        return try {
-            userApi.getUser(id)
-        } catch (e: ClientHttpException) {
-            // Handle 4xx errors
-            null
-        } catch (e: ServerHttpException) {
-            // Handle 5xx errors
-            null
+    @Provides
+    @Singleton
+    fun provideNetworkingKit(
+        @ApplicationContext context: Context,
+    ): NetworkingKit {
+        return NetworkingKit.builder(context)
+            .gatewayUrls(createGatewayUrls())
+            .build()
+    }
+
+    private fun createGatewayUrls(): GatewayBaseUrls {
+        return object : GatewayBaseUrls {
+           override fun getMainGatewayUrl(): String = "https://app.ticketmaster.com/"
         }
     }
+
+   @Provides
+   @Singleton
+   fun provideUserApi(networkingKit: NetworkingKit): UserApi {
+      return networkingKit.createMainService(UserApi::class.java)
+   }
 }
+```
 
 ## ⚙️ Configuration
 
-### Serialization Strategy
+### Change Serialization or Json Mapping Strategy
 
-NetworkingKit supports both Moshi and Kotlinx Serialization:
+NetworkingKit supports both Moshi and Kotlinx Serialization. By default, it uses Kotlinx Serialization.
 
 ```kotlin
 // Use Kotlinx Serialization (default)
@@ -210,6 +203,8 @@ NetworkingKit.builder(context)
     .kotlinxSerializationProvider(customJson)
     .build()
 ```
+
+
 
 ### Zero-Config Authentication
 
