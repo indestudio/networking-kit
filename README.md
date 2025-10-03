@@ -204,7 +204,38 @@ NetworkingKit.builder(context)
     .build()
 ```
 
+### Universal API Caching
 
+Cache any API response without a database using the `@Cache` annotation. Works with **GET, POST, PUT, PATCH** APIs.
+
+```kotlin
+import com.indiedev.networking.annotations.Cache
+import java.util.concurrent.TimeUnit
+
+interface UserApi {
+    // Cache GET request for 5 minutes
+    @GET("users")
+    @Cache(duration = 5, timeUnit = TimeUnit.MINUTES)
+    suspend fun getUsers(): List<User>
+
+    // Cache POST request for 30 seconds
+    @POST("users/search")
+    @Cache(duration = 30, timeUnit = TimeUnit.SECONDS)
+    suspend fun searchUsers(@Body query: SearchQuery): List<User>
+
+    // Cache PUT request for 1 minute
+    @PUT("users/{id}")
+    @Cache(duration = 1, timeUnit = TimeUnit.MINUTES)
+    suspend fun updateUser(@Path("id") id: String, @Body user: User): User
+
+    // Cache PATCH request for 2 minutes
+    @PATCH("users/{id}")
+    @Cache(duration = 2, timeUnit = TimeUnit.MINUTES)
+    suspend fun patchUser(@Path("id") id: String, @Body updates: Map<String, Any>): User
+}
+```
+
+**Supported TimeUnits:** `SECONDS`, `MINUTES`, `HOURS`, `DAYS`
 
 ### Zero-Config Authentication
 
