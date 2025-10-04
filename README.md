@@ -130,7 +130,7 @@ dependencies {
 
 ### Easy Setup
 
-### Your Retrofit interface 
+#### Retrofit interface 
 
 ```kotlin
 interface UserApi {
@@ -175,7 +175,7 @@ object NetworkingModule {
 
 
 
-## ⚙️ Configuration
+## ⚙️ Advanced Configuration
 
 ### Change Serialization or Json Mapping Strategy
 
@@ -206,7 +206,7 @@ NetworkingKit.builder(context)
     .build()
 ```
 
-### Universal API Caching
+### API Caching
 
 Cache any API response without a database using the `@Cache` annotation. Works with **GET, POST, PUT, PATCH** APIs.
 
@@ -269,39 +269,139 @@ interface UserApi {
 2. Add `@MockResponse` annotation to your API methods
 3. Mock responses are automatically served in debug builds only
 
-### Zero-Config Authentication
+### Automatic Token Management
 
-**No manual token handling required!** NetworkingKit automatically manages access/refresh tokens:
+NetworkingKit automatically handles access/refresh tokens with **zero manual intervention**. Simply implement the required interfaces:
+
+#### Step 1: Create Token Refresh Service
+
+Define your refresh service interface and request/response models. **You have complete freedom** to define any fields or types based on your API requirements:
 
 ```kotlin
-class MySessionManager : SessionTokenManager {
-    override fun getAccessToken(): String = prefs.getString("access_token", "")
+interface AppTokenRefreshService : TokenRefreshService {
+    @POST("auth/refresh")
+    suspend fun renewToken(@Body request: RefreshTokenRequest): RefreshTokenResponse
+}
+
+// Define request/response models based on YOUR API structure
+data class RefreshTokenRequest(
+    val refreshToken: String,
+    // Add any fields your API requires
+    val deviceId: String? = null,
+    val clientKey: String? = null
+)
+
+data class RefreshTokenResponse(
+    val accessToken: String,
+    val refreshToken: String,
+    val expiresIn: Long,
+    // Add any fields your API returns
+    val tokenType: String? = null,
+    val userId: String? = null
+)
+```
+
+#### Step 2: Implement TokenRefreshConfig
+
+```kotlin
+class AppTokenRefreshConfig(
+    private val prefs: SharedPreferences
+) : TokenRefreshConfig<RefreshTokenRequest, RefreshTokenResponse> {
+
+    override fun getServiceClass() = AppTokenRefreshService::class.java
+
+    override fun createRefreshRequest() = RefreshTokenRequest(
+        refreshToken = prefs.getString("refresh_token", "") ?: ""
+    )
+
+    override fun extractTokens(response: RefreshTokenResponse) = AuthTokens(
+        accessToken = response.accessToken,
+        refreshToken = response.refreshToken,
+        expiresIn = response.expiresIn
+    )
+
+    override fun isRefreshTokenExpired(exception: HttpException): Boolean {
+        return exception.code() == 401 || exception.code() == 403
+    }
+
+    override fun getRetryCount(): Int = 3 // Optional, default is 3
+}
+```
+
+#### Step 3: Implement SessionTokenManager
+
+Store tokens anywhere you want - **SharedPreferences, Room DB, DataStore, or any other storage**:
+
+```kotlin
+// Example using SharedPreferences
+class AppSessionManager(
+    private val prefs: SharedPreferences
+) : SessionTokenManager {
+
+    override fun getAccessToken(): String {
+        return prefs.getString("access_token", "") ?: ""
+    }
 
     override fun onTokenRefreshed(accessToken: String, refreshToken: String, expiresIn: Long) {
-        // NetworkingKit calls this automatically when tokens are refreshed
+        // Called automatically when tokens are refreshed
+        // Store in your preferred storage (Preferences, Room, DataStore, etc.)
         prefs.edit()
             .putString("access_token", accessToken)
             .putString("refresh_token", refreshToken)
-            .apply()
+            .putLong("expires_in", expiresIn)
+            .commit()
     }
 
     override fun onTokenExpires() {
-        // Handle logout when refresh token expires
-        navigateToLogin()
+        // Called when refresh token expires - handle logout
+        prefs.edit().clear().apply()
+        // Navigate to login screen
     }
 
     override fun getTokenRefreshConfig(): TokenRefreshConfig<*, *> {
-        return MyTokenRefreshConfig() // One-time setup
+        return AppTokenRefreshConfig(prefs)
     }
 }
 
-// That's it! NetworkingKit handles everything else automatically:
-// ✅ Adds Bearer tokens to requests
-// ✅ Detects 401 responses
-// ✅ Refreshes tokens automatically
-// ✅ Retries failed requests
-// ✅ Thread-safe token refresh
 ```
+
+#### Step 4: Provide via Hilt
+
+```kotlin
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkingModule {
+
+    @Provides
+    @Singleton
+    fun provideSessionManager(
+        @ApplicationContext context: Context
+    ): SessionTokenManager {
+        val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        return AppSessionManager(prefs)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNetworkingKit(
+        @ApplicationContext context: Context,
+        sessionManager: SessionTokenManager
+    ): NetworkingKit {
+        return NetworkingKit.builder(context)
+            .gatewayUrls(createGatewayUrls())
+            .sessionManager(sessionManager)
+            .build()
+    }
+}
+```
+
+**What NetworkingKit handles automatically:**
+- ✅ Adds `Authorization: Bearer <token>` to all requests
+- ✅ Detects 401 responses and refreshes tokens
+- ✅ Thread-safe token refresh (prevents multiple simultaneous refreshes)
+- ✅ Retries failed requests with new token
+- ✅ Calls `onTokenExpires()` when refresh token is invalid
+- ✅ Automatic retry logic with configurable retry count
 
 ### Event Logging & Error Tracking
 
@@ -374,77 +474,6 @@ class UserRepository(private val userApi: UserApi) {
 }
 ```
 
-### Enterprise Multi-Gateway Usage
-
-```kotlin
-class ApiRepository {
-    // Enterprise-grade gateway separation for different security requirements
-    private val mainApi = networkingKit.createMainService(MainApi::class.java)           // Standard operations
-    private val secureApi = networkingKit.createSecureService(SecureApi::class.java)     // Card transactions
-    private val authApi = networkingKit.createAuthService(AuthApi::class.java)           // Authentication
-
-    // Main Gateway - Standard business operations
-    suspend fun getUserProfile() = try { mainApi.getProfile() } catch (e: Exception) { null }
-    suspend fun getProductCatalog() = try { mainApi.getProducts() } catch (e: Exception) { null }
-
-    // Secure Gateway - Financial transactions & sensitive data
-    suspend fun processPayment(card: CardDetails) = try { secureApi.processPayment(card) } catch (e: Exception) { null }
-    suspend fun getTransactionHistory() = try { secureApi.getTransactions() } catch (e: Exception) { null }
-
-    // Auth Gateway - Token management
-    suspend fun refreshToken() = try { authApi.refreshToken() } catch (e: Exception) { null }
-    suspend fun validateSession() = try { authApi.validateSession() } catch (e: Exception) { null }
-}
-```
-
-## 💾 Universal API Caching
-
-**No Room DB Required!** Cache any HTTP method with simple headers:
-
-```kotlin
-interface ApiService {
-    @Headers("Cache-Duration: 5", "Cache-Unit: MINUTES")
-    @GET("users/profile")
-    suspend fun getProfile(): UserProfile
-
-    @Headers("Cache-Duration: 30", "Cache-Unit: SECONDS")
-    @POST("users/search")
-    suspend fun searchUsers(@Body query: SearchQuery): List<User>
-
-    @Headers("Cache-Duration: 1", "Cache-Unit: HOURS")
-    @PUT("users/settings")
-    suspend fun updateSettings(@Body settings: UserSettings): Result
-}
-```
-
-**Benefits:**
-- ✅ Cache GET, POST, PUT, PATCH responses
-- ✅ Reduce server load and improve performance
-- ✅ Works offline automatically
-- ✅ No database setup or entity classes needed
-
-**Supported units:** `SECONDS`, `MINUTES`, `HOURS`, `DAYS`
-
-## 🧪 Development & Testing
-
-### API Mocking (Debug builds only)
-
-1. **Create JSON files** in `src/main/res/raw/`:
-   ```
-   res/raw/users_profile.json
-   res/raw/api_data.json
-   ```
-
-2. **Add mock endpoints**:
-   ```kotlin
-   @GET("users/profile/mock")
-   suspend fun getProfile(): Profile
-   ```
-
-3. **Automatic serving**: MockInterceptor serves the corresponding JSON file
-
-**File naming:** `/api/users/123/mock` → `api_users.json`
-
 ### Enterprise Debugging Tools
 
 NetworkingKit provides built-in support for enterprise debugging tools:
@@ -509,103 +538,6 @@ val message = exception.message()      // "User not found"
 val httpCode = exception.code()        // 404
 ```
 
-## 🏗️ Architecture Patterns
-
-### Repository Pattern with Dependency Injection
-
-```kotlin
-@Module
-@InstallIn(SingletonComponent::class)
-object NetworkModule {
-
-    @Provides
-    @Singleton
-    fun provideNetworkingKit(@ApplicationContext context: Context): NetworkingKit {
-        return NetworkingKit.builder(context)
-            .gatewayUrls(AppGatewayUrls())
-            .sessionManager(AppSessionManager())
-            .eventLogger(AppEventLogger())
-            .build()
-    }
-
-    @Provides
-    fun provideUserApi(networkingKit: NetworkingKit): UserApi =
-        networkingKit.createMainService(UserApi::class.java)
-}
-
-class UserRepository @Inject constructor(
-    private val userApi: UserApi
-) {
-    suspend fun getUser(id: String): User? = try {
-        userApi.getUser(id)
-    } catch (e: Exception) {
-        Log.e("UserRepository", "Failed to get user", e)
-        null
-    }
-}
-```
-
-### Flow-based Reactive APIs
-
-```kotlin
-class UserRepository(private val userApi: UserApi) {
-
-    fun getUserFlow(userId: String): Flow<User?> = flow {
-        try {
-            emit(userApi.getUser(userId))
-        } catch (e: Exception) {
-            emit(null)
-        }
-    }
-
-    fun observeUsers(): Flow<List<User>?> = flow {
-        while (true) {
-            try {
-                emit(userApi.getUsers())
-            } catch (e: Exception) {
-                emit(null)
-            }
-            delay(30.seconds)
-        }
-    }
-}
-
-## 🧪 Testing
-
-### Unit Testing with MockWebServer
-
-```kotlin
-@Test
-fun `getUser returns success`() = runTest {
-    // Setup
-    val mockWebServer = MockWebServer()
-    val networkingKit = NetworkingKit.builder(context)
-        .gatewayUrls(object : GatewayBaseUrls {
-            override fun getMainGatewayUrl() = mockWebServer.url("/").toString()
-            override fun getSecureGatewayUrl() = ""
-            override fun getAuthGatewayUrl() = ""
-        })
-        .build()
-
-    val userApi = networkingKit.createMainService(UserApi::class.java)
-
-    // Given
-    mockWebServer.enqueue(
-        MockResponse()
-            .setResponseCode(200)
-            .setBody("""{"id": "123", "name": "John"}""")
-    )
-
-    // When
-    val user = userApi.getUser("123")
-
-    // Then
-    assertNotNull(user)
-    assertEquals("123", user.id)
-
-    mockWebServer.shutdown()
-}
-```
 
 ## 📋 Best Practices
 
