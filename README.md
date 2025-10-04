@@ -206,6 +206,34 @@ NetworkingKit.builder(context)
     .build()
 ```
 
+### Multi-Gateway Configuration
+
+NetworkingKit supports **three separate gateways** for different security requirements. You only need to configure the gateways you actually use:
+
+```kotlin
+// Configure all three gateways
+private fun createGatewayUrls(): GatewayBaseUrls {
+    return object : GatewayBaseUrls {
+        // Required - Main gateway for standard API operations
+        override fun getMainGatewayUrl(): String = "https://api.example.com/"
+
+        // Optional - Secure gateway for sensitive operations (card transactions, payments)
+        override fun getSecureGatewayUrl(): String = "https://secure.example.com/"
+
+        // Optional - Auth gateway for authentication endpoints
+        override fun getAuthGatewayUrl(): String = "https://auth.example.com/"
+    }
+}
+
+// Or configure only the main gateway (secure and auth are optional)
+private fun createGatewayUrls(): GatewayBaseUrls {
+    return object : GatewayBaseUrls {
+        override fun getMainGatewayUrl(): String = "https://api.example.com/"
+        // getSecureGatewayUrl and getAuthGatewayUrl default to empty strings
+    }
+}
+```
+
 ### API Caching
 
 Cache any API response without a database using the `@Cache` annotation. Works with **GET, POST, PUT, PATCH** APIs.
@@ -402,6 +430,149 @@ object NetworkingModule {
 - ✅ Retries failed requests with new token
 - ✅ Calls `onTokenExpires()` when refresh token is invalid
 - ✅ Automatic retry logic with configurable retry count
+- 
+
+### Certificate Transparency
+
+NetworkingKit provides **automatic SSL/TLS security** using Certificate Transparency (CT) to protect against man-in-the-middle attacks and rogue certificates.
+
+#### What is Certificate Transparency?
+
+Certificate Transparency is a security mechanism that validates SSL certificates against public CT logs maintained by Google and other organizations. Unlike traditional SSL pinning (which requires manual certificate management), CT provides:
+
+- **Automatic validation** - No manual certificate pinning required
+- **Protection against rogue certificates** - Detects fraudulently issued certificates
+- **Zero maintenance** - No need to update your app when certificates rotate
+- **Industry standard** - Uses Google's public CT log list
+
+#### Under the Hood
+
+NetworkingKit uses **[Appmattus Certificate Transparency](https://github.com/appmattus/certificatetransparency)** library (`v2.5.72`) which:
+
+1. **Validates certificates** against Google's CT log list (`https://www.gstatic.com/ct/log_list/v3/`)
+2. **Pins gateway URLs** - Automatically pins your Main, Secure, and Auth gateway URLs
+3. **Fails secure** - Blocks connections if certificates aren't found in CT logs
+4. **Zero configuration** - Works automatically once enabled
+
+#### Setup
+
+```kotlin
+class CertTransparencyProvider : CertTransparencyConfig {
+    override fun isFlagEnable(): Boolean = BuildConfig.ENABLE_CERT_TRANSPARENCY
+}
+
+// In your build.gradle.kts
+android {
+    buildTypes {
+        release {
+            buildConfigField("boolean", "ENABLE_CERT_TRANSPARENCY", "true")
+        }
+        debug {
+            buildConfigField("boolean", "ENABLE_CERT_TRANSPARENCY", "false")
+        }
+    }
+}
+
+// Provide via Hilt
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkingModule {
+
+    @Provides
+    @Singleton
+    fun provideCertTransparency(): CertTransparencyConfig {
+        return CertTransparencyProvider()
+    }
+
+    @Provides
+    @Singleton
+    fun provideNetworkingKit(
+        @ApplicationContext context: Context,
+        certTransparency: CertTransparencyConfig
+    ): NetworkingKit {
+        return NetworkingKit.builder(context)
+            .gatewayUrls(createGatewayUrls())
+            .certTransparencyProvider(certTransparency)
+            .build()
+    }
+}
+```
+
+**Benefits:**
+- ✅ No manual SSL pinning required
+- ✅ Automatic certificate validation against public logs
+- ✅ Protection against man-in-the-middle attacks
+- ✅ Zero maintenance when certificates rotate
+- ✅ Production-ready security with minimal setup
+
+### Automatic Network Connectivity Checks
+
+NetworkingKit **automatically validates network connectivity before every API call**, preventing wasted requests and providing clear error handling.
+
+#### How It Works
+
+Before each API request, NetworkingKit checks:
+
+1. **Network Connection** - Is the device connected to WiFi, Cellular, VPN, or WiFi Aware?
+2. **Internet Availability** - Does the connection have actual internet access?
+
+If either check fails, the request is cancelled immediately with a specific exception.
+
+#### Under the Hood
+
+NetworkingKit uses Android's `ConnectivityManager` and `NetworkCapabilities` API to:
+
+**Check for Active Network Connection:**
+```kotlin
+// Detects if device is connected to:
+- WiFi (TRANSPORT_WIFI)
+- Cellular/Mobile Data (TRANSPORT_CELLULAR)
+- VPN (TRANSPORT_VPN)
+- WiFi Aware (TRANSPORT_WIFI_AWARE)
+```
+
+**Validate Internet Access:**
+```kotlin
+// Checks if connection has actual internet (NET_CAPABILITY_VALIDATED)
+// This detects "connected but no internet" scenarios like:
+- WiFi connected but router offline
+- Captive portals (login required)
+- Network with no internet gateway
+```
+
+#### Exception Handling
+
+NetworkingKit throws specific exceptions for different connectivity issues:
+
+```kotlin
+class UserRepository @Inject constructor(
+    private val userApi: UserApi
+) {
+    suspend fun getUser(id: String): User? {
+        return try {
+            userApi.getUser(id)
+        } catch (e: NoConnectivityException) {
+            // No network connection (WiFi/Cellular/VPN)
+            // Show: "No network available, please check your WiFi or Data connection"
+            null
+        } catch (e: NoInternetException) {
+            // Connected but no internet access
+            // Show: "No internet available, please check your connected WiFi or Data"
+            null
+        } catch (e: Exception) {
+            // Other errors
+            null
+        }
+    }
+}
+```
+
+**Benefits:**
+- ✅ Prevents wasted API calls when offline
+- ✅ Instant error feedback (no network timeout delays)
+- ✅ Distinguishes between "no connection" and "no internet"
+- ✅ Works automatically on every request
+- ✅ Supports WiFi, Cellular, VPN, and WiFi Aware
 
 ### Event Logging & Error Tracking
 
@@ -423,14 +594,6 @@ class MyExceptionLogger : ExceptionLogger {
         }
         Crashlytics.recordException(throwable)
     }
-}
-```
-
-### Certificate Transparency
-
-```kotlin
-class CertTransparencyProvider : CertTransparencyConfig {
-    override fun isFlagEnable(): Boolean = BuildConfig.ENABLE_CERT_TRANSPARENCY
 }
 ```
 
