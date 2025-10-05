@@ -576,100 +576,114 @@ class UserRepository @Inject constructor(
 
 ### Event Logging & Error Tracking
 
+NetworkingKit **automatically logs all HTTP errors and authentication events** to your analytics and crash reporting tools. Simply implement the logging interfaces and NetworkingKit handles the rest.
+
+#### What Gets Logged Automatically
+
+**HTTP Errors (4xx & 5xx):**
+- ✅ All **Client Errors** (400-499) - Throws `ClientHttpException`
+- ✅ All **Server Errors** (500-599) - Throws `ServerHttpException`
+- ✅ **IOException** during network calls
+- ✅ **Automatic error parsing** - Extracts `message` and `code` from JSON error response body
+- ✅ Includes: API URL, HTTP status code, error message, backend error code, exception name
+
+**Error Body Parsing:**
+NetworkingKit automatically parses JSON error responses and extracts:
+```json
+{
+  "message": "User not found",
+  "code": "USER_404"  // or "error_code"
+}
+```
+You can access these via `exception.message()` and `exception.errorCode()` methods.
+
+**Token Refresh Events:**
+- ✅ `refresh_token_not_valid` - Refresh token expired/invalid
+- ✅ `http_error` - HTTP errors during token refresh
+- ✅ `refreshing_auth_token_failed` - Token refresh failed after retries
+- ✅ `refresh_token_api_io_failure` - Network errors during refresh
+- ✅ Includes: HTTP code, backend code, error message
+
+#### Implementation
+
 ```kotlin
-class MyEventLogger : EventLogger {
+// 1. Implement EventLogger for analytics
+class AppEventLogger : EventLogger {
     override fun logEvent(eventName: String, properties: HashMap<String, Any>) {
-        Analytics.logEvent(eventName, properties)
+        // Log to Firebase Analytics, Mixpanel, etc.
+        FirebaseAnalytics.getInstance(context).logEvent(eventName, Bundle().apply {
+            properties.forEach { (key, value) ->
+                putString(key, value.toString())
+            }
+        })
     }
 }
 
-class MyExceptionLogger : ExceptionLogger {
+// 2. Implement ExceptionLogger for crash reporting
+class AppExceptionLogger : ExceptionLogger {
     override fun logException(throwable: Throwable) {
-        Crashlytics.recordException(throwable)
+        // Log to Crashlytics, Sentry, etc.
+        FirebaseCrashlytics.getInstance().recordException(throwable)
     }
 
     override fun logException(throwable: Throwable, customKeys: Map<String, Any>) {
+        // Log with additional context (API URL, HTTP code, etc.)
+        val crashlytics = FirebaseCrashlytics.getInstance()
         customKeys.forEach { (key, value) ->
-            Crashlytics.setCustomKey(key, value.toString())
+            crashlytics.setCustomKey(key, value.toString())
         }
-        Crashlytics.recordException(throwable)
+        crashlytics.recordException(throwable)
+    }
+}
+
+// 3. Provide via Hilt
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkingModule {
+
+    @Provides
+    @Singleton
+    fun provideEventLogger(): EventLogger = AppEventLogger()
+
+    @Provides
+    @Singleton
+    fun provideExceptionLogger(): ExceptionLogger = AppExceptionLogger()
+
+    @Provides
+    @Singleton
+    fun provideNetworkingKit(
+        @ApplicationContext context: Context,
+        eventLogger: EventLogger,
+        exceptionLogger: ExceptionLogger
+    ): NetworkingKit {
+        return NetworkingKit.builder(context)
+            .gatewayUrls(createGatewayUrls())
+            .eventLogger(eventLogger)
+            .exceptionLogger(exceptionLogger)
+            .build()
     }
 }
 ```
 
-## 📖 Usage Examples
+#### Logged Properties
 
-### API Error Handling
+Every HTTP error is automatically logged with:
 
-```kotlin
-class UserRepository(private val userApi: UserApi) {
+| Property | Description | Example |
+|----------|-------------|---------|
+| `ExceptionName` | Type of exception | `ClientHttpException` |
+| `httpCode` | HTTP status code | `404` |
+| `ApiUrl` | Full API endpoint URL | `https://api.example.com/users/123` |
+| `ErrorMessage` | Error message from response | `User not found` |
+| `backendCode` | Custom backend error code | `USER_404` |
 
-    suspend fun getUser(userId: String): User? {
-        return try {
-            userApi.getUser(userId)
-        } catch (exception: Exception) {
-            handleError(exception)
-            null
-        }
-    }
+**Benefits:**
+- ✅ Zero manual logging - all errors tracked automatically
+- ✅ Rich context - API URL, HTTP codes, error messages included
+- ✅ Token refresh monitoring - track authentication issues
+- ✅ Works with any analytics/crash reporting tool
+- ✅ Production-ready error tracking out of the box
 
-    private fun handleError(exception: Throwable) {
-        when (exception) {
-            is ClientHttpException -> {
-                // Handle 4xx errors
-                val errorCode = exception.errorCode()
-                val httpCode = exception.code()
-                Log.e("API", "Client error: $errorCode")
-            }
-            is ServerHttpException -> {
-                // Handle 5xx errors
-                Log.e("API", "Server error: ${exception.code()}")
-            }
-            is NoConnectivityException -> {
-                // Handle no network
-                Log.e("API", "No network connection")
-            }
-            else -> {
-                Log.e("API", "Unknown error", exception)
-            }
-        }
-    }
-}
-```
-
-### Enterprise Debugging Tools
-
-NetworkingKit provides built-in support for enterprise debugging tools:
-
-```kotlin
-// Automatic integration - no additional setup required
-val networkingKit = NetworkingKit.builder(context)
-    .gatewayUrls(urls)
-    .build()
-
-// Debug builds automatically enable:
-// ✅ Flipper - Facebook's debugging platform
-// ✅ Chucker - Visual network inspector
-// ✅ HTTP Logging - Detailed request/response logs
-// ✅ Mock interceptor - JSON-based API mocking
-```
-
-**Features:**
-- **Production-safe** - All debug features auto-disabled in release builds
-- **Zero configuration** - Works out of the box
-- **Multiple loggers** - Flipper, Chucker, and HTTP logging simultaneously
-- **Visual inspection** - See all network traffic in real-time
-
-## 🔒 Security Features
-
-### Certificate Transparency
-When enabled, NetworkingKit validates certificates against CT logs and pins gateway URLs:
-
-```kotlin
-class AppCertTransparencyProvider : CertTransparencyConfig {
-    override fun isFlagEnable(): Boolean = BuildConfig.ENABLE_CERT_PINNING
-}
-```
 
 ## 📚 Error Handling Reference
 
@@ -701,26 +715,88 @@ val message = exception.message()      // "User not found"
 val httpCode = exception.code()        // 404
 ```
 
+### Built-in Debugging Tools
 
-## 📋 Best Practices
+NetworkingKit includes **powerful debugging tools that work automatically in debug builds** with zero configuration. All tools are production-safe and automatically disabled in release builds.
 
-### Performance Optimization
-- **Gateway Selection**: Use appropriate gateways for different security levels
-- **Smart Caching**: Add cache headers to reduce network calls
-- **Error Handling**: Always wrap API calls in try-catch blocks
-- **Flow Integration**: Use reactive streams for real-time data updates
+#### Included Debug Tools
 
-### Architecture Guidelines
-- **Repository Pattern**: Encapsulate API calls in repository classes
-- **Dependency Injection**: Use Hilt or similar for clean architecture
-- **Error Recovery**: Implement proper retry logic for network failures
-- **Security**: Enable certificate transparency in production builds
+**1. Flipper Network Plugin** (Debug only)
+- Facebook's powerful debugging platform
+- Visualize all network requests/responses in desktop app
+- Inspect request headers, response bodies, timing, and errors
+- Additional plugins: CrashReporter, Databases, Navigation, Inspector
+- **Automatically initialized and started** - just install Flipper desktop app
 
-## 🤝 Contributing
+**2. Chucker** (Debug only)
+- On-device HTTP inspector with visual UI
+- See all API calls directly on your Android device
+- Inspect requests, responses, headers, and body
+- Search and filter network calls
+- Share/export logs for debugging
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+**3. HTTP Logging Interceptor** (Debug only)
+- Detailed Logcat output for all network calls
+- Logs full request/response bodies
+- Level: `BODY` (most verbose)
+- Perfect for quick debugging in Android Studio
 
-## 📄 License
+**4. Mock Response Interceptor** (Debug only)
+- Serves `@MockResponse` annotated endpoints
+- See [Easy API Mocking](#easy-api-mocking-debug-builds-only) section
+
+#### How It Works
+**Debug Builds:**
+```kotlin
+// Automatically enabled when BuildConfig.DEBUG = true
+val networkingKit = NetworkingKit.builder(context)
+    .gatewayUrls(urls)
+    .build()
+
+// NetworkingKit automatically adds:
+// ✅ FlipperOkhttpInterceptor - Flipper network debugging
+// ✅ ChuckerInterceptor - On-device HTTP inspector
+// ✅ HttpLoggingInterceptor - Logcat output (BODY level)
+// ✅ MockResponseInterceptor - Mock API responses
+```
+
+**Release Builds:**
+```kotlin
+// All debug interceptors automatically disabled
+// Flipper returns null interceptor (no-op)
+// Uses chucker-no-op library (zero overhead)
+```
+
+#### Flipper Setup (Optional but Recommended)
+
+1. **Install Flipper Desktop:** [Download from Facebook](https://fbflipper.com/)
+2. **Run your debug app** - Flipper automatically connects
+3. **Enable Network plugin** - See all API calls in real-time
+
+**Flipper Plugins Included:**
+- `NetworkFlipperPlugin` - HTTP traffic inspection
+- `CrashReporterPlugin` - Crash reporting
+- `DatabasesFlipperPlugin` - Database inspection
+- `NavigationFlipperPlugin` - Navigation tracking
+- `InspectorFlipperPlugin` - View hierarchy inspection
+
+#### Chucker In-App Notification
+
+Chucker shows a notification for every API call. Tap it to see:
+- Request/response details
+- Headers and body
+- Timing information
+- Error details
+
+**Benefits:**
+- ✅ **Zero configuration** - Works automatically in debug builds
+- ✅ **Production-safe** - All tools disabled in release (zero overhead)
+- ✅ **Multiple tools** - Flipper, Chucker, and HTTP logging work together
+- ✅ **Visual debugging** - Inspect network traffic on device and desktop
+- ✅ **Full request/response logging** - See complete payloads
+- ✅ **No manual setup** - NetworkingKit handles all interceptor configuration
+
+
 
 ```
 Licensed under the Apache License, Version 2.0 (the "License");
