@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.util.Log
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
 
 internal interface AppVersionProvider {
     fun getAppVersionName(): String
@@ -13,7 +11,7 @@ internal interface AppVersionProvider {
     fun getAppVersionCode(): String
 }
 
-class AppVersionProviderImp @Inject constructor(@ApplicationContext val context: Context) :
+class AppVersionProviderImp( val context: Context) :
     AppVersionProvider {
     override fun getAppVersionName(): String {
         return getVersionDetail().first ?: "unknown"

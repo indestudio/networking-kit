@@ -5,7 +5,6 @@ import android.util.Log
 import com.indiedev.networking.BuildConfig
 import com.indiedev.networking.mock.AnnotationMockRegistry
 import com.indiedev.networking.mock.MockInfo
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
@@ -20,9 +19,7 @@ import java.io.IOException
 import java.io.InputStreamReader
 import java.util.zip.GZIPOutputStream
 
-class MockResponseInterceptor(
-    @ApplicationContext val context: Context,
-) : Interceptor {
+class MockResponseInterceptor(val context: Context) : Interceptor {
     private val tag = MockResponseInterceptor::class.simpleName
     private val annotationRegistry = AnnotationMockRegistry(context)
 

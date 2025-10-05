@@ -7,7 +7,6 @@ import com.indiedev.networking.event.EventsProperties.ERROR_MESSAGE
 import com.indiedev.networking.event.EventsProperties.EXCEPTION_NAME
 import com.indiedev.networking.event.EventsProperties.HTTP_CODE
 import com.indiedev.networking.http.CustomHttpException
-import javax.inject.Inject
 
 internal interface EventsHelper {
 
@@ -24,7 +23,7 @@ internal interface EventsHelper {
     ): HashMap<String, Any>
 }
 
-internal class EventHelperImp @Inject constructor(
+internal class EventHelperImp(
     private val eventLogger: EventLogger,
 ) : EventsHelper {
 

@@ -15,9 +15,8 @@ import okhttp3.Request
 import okhttp3.Response
 import retrofit2.Response.error
 import java.io.IOException
-import javax.inject.Inject
 
-internal class HttpErrorInterceptor @Inject constructor(
+internal class HttpErrorInterceptor(
     private val exceptionLogger: ExceptionLogger,
 ) : Interceptor {
 

@@ -5,16 +5,10 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.indiedev.networking.error.NoConnectivityException
 import com.indiedev.networking.error.NoInternetException
-import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.Interceptor
 import okhttp3.Response
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-internal class NoConnectionInterceptor @Inject constructor(
-    @ApplicationContext private val context: Context,
-) : Interceptor {
+internal class NoConnectionInterceptor(private val context: Context) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         return if (!isConnectionOn(context)) {
