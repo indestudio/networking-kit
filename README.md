@@ -219,35 +219,78 @@ interface UserApi {
 
 **Supported TimeUnits:** `SECONDS`, `MINUTES`, `HOURS`, `DAYS`
 
-### Easy API Mocking (Debug builds only)
+### Certificate Transparency
 
-Mock API responses using the `@MockResponse` annotation:
+NetworkingKit provides **automatic SSL/TLS security** using Certificate Transparency (CT) to protect against man-in-the-middle attacks and rogue certificates.
+
+#### What is Certificate Transparency?
+
+Certificate Transparency is a security mechanism that validates SSL certificates against public CT logs maintained by Google and other organizations. Unlike traditional SSL pinning (which requires manual certificate management), CT provides:
+
+- **Automatic validation** - No manual certificate pinning required
+- **Protection against rogue certificates** - Detects fraudulently issued certificates
+- **Zero maintenance** - No need to update your app when certificates rotate
+- **Industry standard** - Uses Google's public CT log list
+
+#### Under the Hood
+
+NetworkingKit uses **[Appmattus Certificate Transparency](https://github.com/appmattus/certificatetransparency)** library (`v2.5.72`) which:
+
+1. **Validates certificates** against Google's CT log list (`https://www.gstatic.com/ct/log_list/v3/`)
+2. **Pins gateway URLs** - Automatically pins your Main, Secure, and Auth gateway URLs
+3. **Fails secure** - Blocks connections if certificates aren't found in CT logs
+4. **Zero configuration** - Works automatically once enabled
+
+#### Setup
 
 ```kotlin
-import com.indiedev.networking.annotations.MockResponse
+class CertTransparencyProvider : CertTransparencyConfig {
+    override fun isFlagEnable(): Boolean = BuildConfig.ENABLE_CERT_TRANSPARENCY
+}
 
-interface UserApi {
-    // Auto-loads from res/raw/users_list.json
-    @GET("users")
-    @MockResponse("users_list")
-    suspend fun getUsers(): List<User>
+// In your build.gradle.kts
+android {
+    buildTypes {
+        release {
+            buildConfigField("boolean", "ENABLE_CERT_TRANSPARENCY", "true")
+        }
+        debug {
+            buildConfigField("boolean", "ENABLE_CERT_TRANSPARENCY", "false")
+        }
+    }
+}
 
-    // Custom status code and delay
-    @POST("login")
-    @MockResponse(resourceName = "login_success", statusCode = 200, delay = 1000)
-    suspend fun login(@Body request: LoginRequest): LoginResponse
+// Provide via Hilt
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkingModule {
 
-    // Simulate error response
-    @GET("users/{id}")
-    @MockResponse(resourceName = "user_not_found", statusCode = 404)
-    suspend fun getUser(@Path("id") id: String): User
+    @Provides
+    @Singleton
+    fun provideCertTransparency(): CertTransparencyConfig {
+        return CertTransparencyProvider()
+    }
+
+    @Provides
+    @Singleton
+    fun provideNetworkingKit(
+        @ApplicationContext context: Context,
+        certTransparency: CertTransparencyConfig
+    ): NetworkingKit {
+        return NetworkingKit.builder(context)
+            .gatewayUrls(createGatewayUrls())
+            .certTransparencyProvider(certTransparency)
+            .build()
+    }
 }
 ```
 
-**How it works:**
-1. Create JSON files in `res/raw/` (e.g., `users_list.json`, `login_success.json`)
-2. Add `@MockResponse` annotation to your API methods
-3. Mock responses are automatically served in debug builds only
+**Benefits:**
+- ✅ No manual SSL pinning required
+- ✅ Automatic certificate validation against public logs
+- ✅ Protection against man-in-the-middle attacks
+- ✅ Zero maintenance when certificates rotate
+- ✅ Production-ready security with minimal setup
 
 ### Automatic Token Management
 
@@ -382,80 +425,6 @@ object NetworkingModule {
 - ✅ Retries failed requests with new token
 - ✅ Calls `onTokenExpires()` when refresh token is invalid
 - ✅ Automatic retry logic with configurable retry count
-- 
-
-### Certificate Transparency
-
-NetworkingKit provides **automatic SSL/TLS security** using Certificate Transparency (CT) to protect against man-in-the-middle attacks and rogue certificates.
-
-#### What is Certificate Transparency?
-
-Certificate Transparency is a security mechanism that validates SSL certificates against public CT logs maintained by Google and other organizations. Unlike traditional SSL pinning (which requires manual certificate management), CT provides:
-
-- **Automatic validation** - No manual certificate pinning required
-- **Protection against rogue certificates** - Detects fraudulently issued certificates
-- **Zero maintenance** - No need to update your app when certificates rotate
-- **Industry standard** - Uses Google's public CT log list
-
-#### Under the Hood
-
-NetworkingKit uses **[Appmattus Certificate Transparency](https://github.com/appmattus/certificatetransparency)** library (`v2.5.72`) which:
-
-1. **Validates certificates** against Google's CT log list (`https://www.gstatic.com/ct/log_list/v3/`)
-2. **Pins gateway URLs** - Automatically pins your Main, Secure, and Auth gateway URLs
-3. **Fails secure** - Blocks connections if certificates aren't found in CT logs
-4. **Zero configuration** - Works automatically once enabled
-
-#### Setup
-
-```kotlin
-class CertTransparencyProvider : CertTransparencyConfig {
-    override fun isFlagEnable(): Boolean = BuildConfig.ENABLE_CERT_TRANSPARENCY
-}
-
-// In your build.gradle.kts
-android {
-    buildTypes {
-        release {
-            buildConfigField("boolean", "ENABLE_CERT_TRANSPARENCY", "true")
-        }
-        debug {
-            buildConfigField("boolean", "ENABLE_CERT_TRANSPARENCY", "false")
-        }
-    }
-}
-
-// Provide via Hilt
-@Module
-@InstallIn(SingletonComponent::class)
-object NetworkingModule {
-
-    @Provides
-    @Singleton
-    fun provideCertTransparency(): CertTransparencyConfig {
-        return CertTransparencyProvider()
-    }
-
-    @Provides
-    @Singleton
-    fun provideNetworkingKit(
-        @ApplicationContext context: Context,
-        certTransparency: CertTransparencyConfig
-    ): NetworkingKit {
-        return NetworkingKit.builder(context)
-            .gatewayUrls(createGatewayUrls())
-            .certTransparencyProvider(certTransparency)
-            .build()
-    }
-}
-```
-
-**Benefits:**
-- ✅ No manual SSL pinning required
-- ✅ Automatic certificate validation against public logs
-- ✅ Protection against man-in-the-middle attacks
-- ✅ Zero maintenance when certificates rotate
-- ✅ Production-ready security with minimal setup
 
 ### Automatic Network Connectivity Checks
 
@@ -718,7 +687,37 @@ Chucker shows a notification for every API call. Tap it to see:
 - ✅ **Full request/response logging** - See complete payloads
 - ✅ **No manual setup** - NetworkingKit handles all interceptor configuration
 
+### Easy API Mocking (Debug builds only)
 
+Mock API responses using the `@MockResponse` annotation:
+
+```kotlin
+import com.indiedev.networking.annotations.MockResponse
+
+interface UserApi {
+    // Auto-loads from res/raw/users_list.json
+    @GET("users")
+    @MockResponse("users_list")
+    suspend fun getUsers(): List<User>
+
+    // Custom status code and delay
+    @POST("login")
+    @MockResponse(resourceName = "login_success", statusCode = 200, delay = 1000)
+    suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    // Simulate error response
+    @GET("users/{id}")
+    @MockResponse(resourceName = "user_not_found", statusCode = 404)
+    suspend fun getUser(@Path("id") id: String): User
+}
+```
+
+**How it works:**
+1. Create JSON files in `res/raw/` (e.g., `users_list.json`, `login_success.json`)
+2. Add `@MockResponse` annotation to your API methods
+3. Mock responses are automatically served in debug builds only
+
+## 📄 License
 
 ```
 Licensed under the Apache License, Version 2.0 (the "License");
