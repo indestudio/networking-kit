@@ -14,10 +14,11 @@
 **NetworkingKit** is an enterprise-grade Android networking library designed for production applications. Built on Retrofit, OkHttp3, and Kotlinx Serialization, it provides **multi-gateway architecture**, **universal API caching**, **zero-config authentication**, and **comprehensive error handling** with minimal setup.
 
 **Key Features:**
-- 🏢 **Multi-Gateway Architecture** - Separate Main, Secure (card transactions), and Auth gateways
-- 🔐 **Zero auth complexity** - Automatic token management built-in (access and refresh tokens)
+- 🏢 **Multi-Gateway support** - Separate Main, Secure (card transactions), and Auth gateways
+🔄 **Flexible serialization** - Switch between Kotlinx Serialization and Moshi
 - 💾 **No DB needed** - Cache any API response directly
 - 🛡️ **Security by default** - Certificate transparency without manual SSL pinning
+- 🔐 **Zero auth complexity** - Automatic token management built-in (access and refresh tokens)
 - 🌐 **Smart connectivity** - Built-in network detection and connectivity checks
 - ⚠️ **Advanced error handling** - Custom exceptions with detailed error info and automatic logging
 - 🔍 **Built-in debugging** - Flipper, Chucker, and HTTP logging support
