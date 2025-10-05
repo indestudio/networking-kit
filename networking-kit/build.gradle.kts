@@ -75,9 +75,9 @@ dependencies {
     implementation(libs.retrofit.kotlinx.serialization.converter)
 
     // Moshi for JSON parsing
-    implementation("com.squareup.moshi:moshi:1.15.0")
-    implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
-    implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
+    implementation(libs.moshi)
+    implementation(libs.moshi.kotlin)
+    implementation(libs.retrofit.converter.moshi)
 
     debugImplementation(libs.chucker.debug)
     releaseImplementation(libs.chucker.release)
@@ -97,7 +97,8 @@ dependencies {
         exclude(group = "org.hamcrest", module = "hamcrest-core")
     }
 
-    testImplementation("io.mockk:mockk:1.13.17")
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinxcoroutines.test)
     testImplementation(libs.bundles.mockito)
     testImplementation(libs.core.testing)
     testImplementation(libs.retrofit.mock)
