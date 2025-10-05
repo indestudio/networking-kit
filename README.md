@@ -685,36 +685,6 @@ Every HTTP error is automatically logged with:
 - ✅ Production-ready error tracking out of the box
 
 
-## 📚 Error Handling Reference
-
-### Exception Types
-
-| Exception | Description | Codes |
-|-----------|-------------|--------|
-| `ClientHttpException` | Client errors | 400-499 |
-| `ServerHttpException` | Server errors | 500-599 |
-| `NoConnectivityException` | No network | - |
-| `NoInternetException` | No internet access | - |
-
-### Error Response Parsing
-
-NetworkingKit automatically parses JSON error responses:
-
-```json
-{
-  "message": "User not found",
-  "code": "USER_404"
-}
-```
-
-```kotlin
-// Access parsed error details
-val exception = result.exception as ClientHttpException
-val errorCode = exception.errorCode()  // "USER_404"
-val message = exception.message()      // "User not found"
-val httpCode = exception.code()        // 404
-```
-
 ### Built-in Debugging Tools
 
 NetworkingKit includes **powerful debugging tools that work automatically in debug builds** with zero configuration. All tools are production-safe and automatically disabled in release builds.
@@ -813,13 +783,3 @@ limitations under the License.
 ```
 
 ---
-
-<div align="center">
-
-[![Made with ❤️ by IndieDevTools](https://img.shields.io/badge/Made%20with%20❤️%20by-IndieDevTools-red.svg)](https://github.com/indiedevtools)
-
-**NetworkingKit** • Modern Android Networking Made Simple
-
-[⭐ Star on GitHub](https://github.com/indiedevtools/networkingkit) • [📖 Documentation](https://docs.networkingkit.dev) • [🐛 Report Bug](https://github.com/indiedevtools/networkingkit/issues)
-
-</div>
