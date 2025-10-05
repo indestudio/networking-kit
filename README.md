@@ -129,6 +129,34 @@ object NetworkingModule {
 
 ## ⚙️ Advanced Configuration
 
+### Multi-Gateway Configuration
+
+NetworkingKit supports **three separate gateways** for different security requirements. You only need to configure the gateways you actually use:
+
+```kotlin
+// Configure all three gateways
+private fun createGatewayUrls(): GatewayBaseUrls {
+    return object : GatewayBaseUrls {
+        // Required - Main gateway for standard API operations
+        override fun getMainGatewayUrl(): String = "https://api.example.com/"
+
+        // Optional - Secure gateway for sensitive operations (card transactions, payments)
+        override fun getSecureGatewayUrl(): String = "https://secure.example.com/"
+
+        // Optional - Auth gateway for authentication endpoints
+        override fun getAuthGatewayUrl(): String = "https://auth.example.com/"
+    }
+}
+
+// Or configure only the main gateway (secure and auth are optional)
+private fun createGatewayUrls(): GatewayBaseUrls {
+    return object : GatewayBaseUrls {
+        override fun getMainGatewayUrl(): String = "https://api.example.com/"
+        // getSecureGatewayUrl and getAuthGatewayUrl default to empty strings
+    }
+}
+```
+
 ### Change Serialization or Json Mapping Strategy
 
 NetworkingKit supports both Moshi and Kotlinx Serialization. By default, it uses Kotlinx Serialization.
@@ -156,34 +184,6 @@ NetworkingKit.builder(context)
     .gatewayUrls(urls)
     .kotlinxSerializationProvider(customJson)
     .build()
-```
-
-### Multi-Gateway Configuration
-
-NetworkingKit supports **three separate gateways** for different security requirements. You only need to configure the gateways you actually use:
-
-```kotlin
-// Configure all three gateways
-private fun createGatewayUrls(): GatewayBaseUrls {
-    return object : GatewayBaseUrls {
-        // Required - Main gateway for standard API operations
-        override fun getMainGatewayUrl(): String = "https://api.example.com/"
-
-        // Optional - Secure gateway for sensitive operations (card transactions, payments)
-        override fun getSecureGatewayUrl(): String = "https://secure.example.com/"
-
-        // Optional - Auth gateway for authentication endpoints
-        override fun getAuthGatewayUrl(): String = "https://auth.example.com/"
-    }
-}
-
-// Or configure only the main gateway (secure and auth are optional)
-private fun createGatewayUrls(): GatewayBaseUrls {
-    return object : GatewayBaseUrls {
-        override fun getMainGatewayUrl(): String = "https://api.example.com/"
-        // getSecureGatewayUrl and getAuthGatewayUrl default to empty strings
-    }
-}
 ```
 
 ### API Caching
