@@ -22,7 +22,7 @@ internal object FlipperInterceptorFactory {
     }
 
     private fun getFlipperClient(
-        context: Context,
+        context: Context
     ): FlipperClient? {
         SoLoader.init(context, false)
 

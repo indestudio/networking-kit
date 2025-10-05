@@ -17,7 +17,7 @@ import retrofit2.Response.error
 import java.io.IOException
 
 internal class HttpErrorInterceptor(
-    private val exceptionLogger: ExceptionLogger,
+    private val exceptionLogger: ExceptionLogger
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -52,20 +52,20 @@ internal class HttpErrorInterceptor(
     private fun logException(
         httpException: CustomHttpException,
         httpUrl: String,
-        response: Response,
+        response: Response
     ) {
         exceptionLogger.logException(
             httpException,
             mapOf(
                 EventsProperties.API_URL to httpUrl,
-                EventsProperties.HTTP_CODE to response.code,
-            ),
+                EventsProperties.HTTP_CODE to response.code
+            )
         )
     }
 
     private fun createErrorResponse(
         response: Response,
-        httpException: CustomHttpException,
+        httpException: CustomHttpException
     ) = Response.Builder().body(response.body).code(response.code)
         .message(httpException.message().toString())
         .protocol(Protocol.HTTP_1_1)

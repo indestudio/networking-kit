@@ -1,6 +1,5 @@
 package com.indiedev.networking.common
 
-
 internal const val PREFIX_AUTH_TOKEN = "Bearer "
 internal const val EMPTY_STRING = ""
 internal const val CONST_AUTH_TOKEN = "token"

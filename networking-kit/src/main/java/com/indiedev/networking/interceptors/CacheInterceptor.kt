@@ -57,9 +57,8 @@ class CacheInterceptor(context: Context) : Interceptor {
         return response
     }
 
-
     private fun cacheResponse(response: Response, cacheKey: String, cacheConfig: AnnotationCacheRegistry.CacheConfig) {
-         try {
+        try {
             val responseBody = response.body ?: return
             // Create a copy of the response body to avoid consuming the original
             val source = responseBody.source()

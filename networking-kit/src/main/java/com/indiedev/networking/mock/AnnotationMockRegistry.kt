@@ -9,12 +9,11 @@ import java.lang.reflect.Method
 import java.util.regex.Pattern
 
 /**
- * Registry that automatically discovers and processes @MockResponse annotations 
- * from the call stack when intercepting requests
+ * Registry that automatically discovers and processes @MockResponse annotations * from the call stack when intercepting requests
  */
 class AnnotationMockRegistry(private val context: Context) {
     private val tag = "AnnotationMockRegistry"
-    
+
     /**
      * Extract mock info directly from Retrofit request without persistent caching
      */
@@ -22,10 +21,10 @@ class AnnotationMockRegistry(private val context: Context) {
         try {
             // Get the invocation from request tag (set by Retrofit)
             val invocation = request.tag(retrofit2.Invocation::class.java)
-            invocation?.let { 
+            invocation?.let {
                 val method = it.method()
                 val mockAnnotation = method.getAnnotation(MockResponse::class.java)
-                
+
                 if (mockAnnotation != null) {
                     val httpInfo = extractHttpInfo(method)
                     if (httpInfo != null && matchesRequest(request, httpInfo)) {
@@ -40,7 +39,7 @@ class AnnotationMockRegistry(private val context: Context) {
         }
         return null
     }
-    
+
     /**
      * Check if the HTTP info matches the current request
      */
@@ -48,18 +47,18 @@ class AnnotationMockRegistry(private val context: Context) {
         if (!request.method.equals(httpInfo.method, ignoreCase = true)) {
             return false
         }
-        
+
         val url = request.url.toString()
         return matchesPattern(request.method, url, "${httpInfo.method}:${httpInfo.path}")
     }
-    
+
     /**
      * Find mock info for a given request (processes annotation on-demand)
      */
     fun findMockForRequest(request: Request): MockInfo? {
         return extractMockFromRequest(request)
     }
-    
+
     private fun extractHttpInfo(method: Method): HttpInfo? {
         method.annotations.forEach { annotation ->
             when (annotation) {
@@ -75,16 +74,16 @@ class AnnotationMockRegistry(private val context: Context) {
         }
         return null
     }
-    
+
     private fun createMockInfo(annotation: MockResponse, httpInfo: HttpInfo): MockInfo {
         val resourceName = if (annotation.resourceName.isNotEmpty()) {
             annotation.resourceName
         } else {
             generateResourceName(httpInfo.path)
         }
-        
+
         val headers = parseHeaders(annotation.headers)
-        
+
         return MockInfo(
             resourceName = resourceName,
             statusCode = annotation.statusCode,
@@ -93,7 +92,7 @@ class AnnotationMockRegistry(private val context: Context) {
             delay = annotation.delay
         )
     }
-    
+
     private fun generateResourceName(path: String): String {
         // Convert path like "/users/{id}/posts" to "users_posts"
         return path
@@ -103,10 +102,10 @@ class AnnotationMockRegistry(private val context: Context) {
             .joinToString("_")
             .lowercase()
     }
-    
+
     private fun parseHeaders(headerString: String): Map<String, String> {
         if (headerString.isBlank()) return emptyMap()
-        
+
         return headerString.split(",")
             .mapNotNull { header ->
                 val parts = header.split(":", limit = 2)
@@ -118,18 +117,18 @@ class AnnotationMockRegistry(private val context: Context) {
             }
             .toMap()
     }
-    
+
     private fun matchesPattern(method: String, url: String, pattern: String): Boolean {
         val parts = pattern.split(":", limit = 2)
         if (parts.size != 2) return false
-        
+
         val patternMethod = parts[0]
         val patternPath = parts[1]
-        
+
         if (!method.equals(patternMethod, ignoreCase = true)) {
             return false
         }
-        
+
         // Convert Retrofit path pattern to regex
         // e.g., "/users/{id}/posts" -> "/users/\\d+/posts"
         val regexPattern = patternPath
@@ -137,7 +136,7 @@ class AnnotationMockRegistry(private val context: Context) {
             .replace("{userId}", "\\d+")
             .replace("{postId}", "\\d+")
             .replace(Regex("\\{\\w+\\}"), "[^/]+") // Generic path parameter matching
-        
+
         return try {
             val regex = Pattern.compile(".*$regexPattern.*")
             regex.matcher(url).find()
@@ -146,7 +145,7 @@ class AnnotationMockRegistry(private val context: Context) {
             url.contains(patternPath.replace(Regex("\\{\\w+\\}"), ""))
         }
     }
-    
+
     private data class HttpInfo(
         val method: String,
         val path: String

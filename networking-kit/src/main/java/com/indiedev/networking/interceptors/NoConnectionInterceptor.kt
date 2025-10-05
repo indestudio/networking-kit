@@ -28,18 +28,18 @@ internal class NoConnectionInterceptor(private val context: Context) : Intercept
     }
 
     private fun checkNetworkConnectivityOnPostAndroidM(
-        connectivityManager: ConnectivityManager,
+        connectivityManager: ConnectivityManager
     ): Boolean {
         val network = connectivityManager.activeNetwork
         val capabilities =
             connectivityManager.getNetworkCapabilities(network)
 
         return capabilities != null && (
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI_AWARE)
-                )
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI_AWARE)
+            )
     }
 
     private fun isInternetAvailable(): Boolean {

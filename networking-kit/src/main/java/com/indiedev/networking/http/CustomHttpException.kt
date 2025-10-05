@@ -42,7 +42,9 @@ open class CustomHttpException(private val response: retrofit2.Response<*>) : Ru
                 val errors = obj["errors"] as? org.json.simple.JSONArray
                 message = if (!errors.isNullOrEmpty()) {
                     errors[0] as? String
-                } else null
+                } else {
+                    null
+                }
             }
 
             Pair(message ?: response.message(), errorCode)

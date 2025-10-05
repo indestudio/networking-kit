@@ -44,7 +44,6 @@ class DiskCache(
             val metadataJson = json.encodeToString(entry.toMetadata())
             FileOutputStream(metadataFile).use { it.write(metadataJson.toByteArray()) }
 
-
             Log.d(tag, "Cached entry for key: $key")
             true
         } catch (e: Exception) {
@@ -66,7 +65,6 @@ class DiskCache(
             if (!bodyFile.exists() || !metadataFile.exists()) {
                 return null
             }
-
 
             // Read response body
             val responseBody = FileInputStream(bodyFile).use { it.readBytes() }
@@ -129,7 +127,6 @@ class DiskCache(
             Log.e(tag, "Failed to clear cache", e)
         }
     }
-
 
     /**
      * Generate a safe key for DiskLruCache (alphanumeric + underscore)

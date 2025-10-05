@@ -7,16 +7,16 @@ import okhttp3.Response
 
 internal class DefaultHeadersInterceptor(
     private val tokenProvider: AccessTokenProvider,
-    private val versionDetailsProvider: AppVersionProvider,
+    private val versionDetailsProvider: AppVersionProvider
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         return chain.proceed(
             chain.request().newBuilder()
                 .header(AUTHORIZATION, "$BEARER ${tokenProvider.getAccessToken()}")
-                .header(APP_VERSION_NAME, versionDetailsProvider.getAppVersionName() )
+                .header(APP_VERSION_NAME, versionDetailsProvider.getAppVersionName())
                 .header(APP_VERSION_CODE, versionDetailsProvider.getAppVersionCode())
-                .build(),
+                .build()
         )
     }
 

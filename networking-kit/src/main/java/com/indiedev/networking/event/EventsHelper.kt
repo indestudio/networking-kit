@@ -19,12 +19,12 @@ internal interface EventsHelper {
     fun getEventProperties(
         httpCode: Int,
         errorCode: Int,
-        message: String = "",
+        message: String = ""
     ): HashMap<String, Any>
 }
 
 internal class EventHelperImp(
-    private val eventLogger: EventLogger,
+    private val eventLogger: EventLogger
 ) : EventsHelper {
 
     override fun logEvent(eventName: String, properties: HashMap<String, Any>) {
@@ -55,7 +55,7 @@ internal class EventHelperImp(
     override fun getEventProperties(
         httpCode: Int,
         errorCode: Int,
-        message: String,
+        message: String
     ): HashMap<String, Any> {
         val properties = HashMap<String, Any>()
         properties[HTTP_CODE] = httpCode
@@ -74,7 +74,7 @@ object EventsNames {
 
 object EventsProperties {
     const val HTTP_CODE = "httpCode"
-    const val BACKEND_CODE =  "backendCode"
+    const val BACKEND_CODE = "backendCode"
     const val ERROR_MESSAGE = "ErrorMessage"
     const val API_URL = "ApiUrl"
     const val EXCEPTION_NAME = "ExceptionName"

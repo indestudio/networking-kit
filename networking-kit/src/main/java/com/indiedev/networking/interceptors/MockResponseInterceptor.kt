@@ -25,15 +25,15 @@ class MockResponseInterceptor(val context: Context) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        
+
         // Only process mocks in debug mode
         if (!BuildConfig.DEBUG) {
             return chain.proceed(request)
         }
-        
+
         // Check annotation-based mocks
         val mockInfo = annotationRegistry.findMockForRequest(request)
-        
+
         return if (mockInfo != null) {
             createMockResponse(request, mockInfo)
         } else {
@@ -50,23 +50,23 @@ class MockResponseInterceptor(val context: Context) : Interceptor {
             if (mockInfo.delay > 0) {
                 delay(mockInfo.delay)
             }
-            
+
             // Get resource ID for the mock file
             val resourceId = context.resources.getIdentifier(
-                mockInfo.resourceName, 
-                "raw", 
+                mockInfo.resourceName,
+                "raw",
                 context.packageName
             )
-            
+
             if (resourceId == 0) {
                 Log.w(tag, "Mock resource not found: ${mockInfo.resourceName}")
                 throw IOException("Mock resource not found: ${mockInfo.resourceName}")
             }
-            
+
             // Read and compress the mock data
             val jsonString = readJsonFromRaw(context, resourceId)
 //            val compressedResponse = compressString(jsonString)
-            
+
             // Build the mock response
             val responseBuilder = Response.Builder()
                 .request(request)
@@ -76,12 +76,12 @@ class MockResponseInterceptor(val context: Context) : Interceptor {
                 .body(jsonString.toResponseBody(mockInfo.contentType.toMediaTypeOrNull()))
                 .addHeader("content-type", mockInfo.contentType)
 //                .addHeader("content-encoding", "gzip")
-            
+
             // Add custom headers if any
             mockInfo.headers.forEach { (name, value) ->
                 responseBuilder.addHeader(name, value)
             }
-            
+
             responseBuilder.build()
         }
     }

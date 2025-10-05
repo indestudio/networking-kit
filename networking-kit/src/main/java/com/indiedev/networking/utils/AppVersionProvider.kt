@@ -11,7 +11,7 @@ internal interface AppVersionProvider {
     fun getAppVersionCode(): String
 }
 
-class AppVersionProviderImp( val context: Context) :
+class AppVersionProviderImp(val context: Context) :
     AppVersionProvider {
     override fun getAppVersionName(): String {
         return getVersionDetail().first ?: "unknown"

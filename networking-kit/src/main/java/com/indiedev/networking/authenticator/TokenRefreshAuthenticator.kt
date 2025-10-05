@@ -1,9 +1,9 @@
 package com.indiedev.networking.authenticator
 
-import com.indiedev.networking.contracts.SessionTokenManager
-import com.indiedev.networking.contracts.TokenRefreshConfig
 import com.indiedev.networking.common.EMPTY_STRING
 import com.indiedev.networking.common.PREFIX_AUTH_TOKEN
+import com.indiedev.networking.contracts.SessionTokenManager
+import com.indiedev.networking.contracts.TokenRefreshConfig
 import com.indiedev.networking.event.EventsHelper
 import com.indiedev.networking.event.EventsNames
 import com.indiedev.networking.utils.Result
@@ -17,22 +17,21 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
 import retrofit2.HttpException
-import java.util.concurrent.atomic.AtomicInteger
-
 import java.lang.reflect.Method
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.intrinsics.*
 
 internal class TokenRefreshAuthenticator(
     private val sessionTokenManager: SessionTokenManager,
     private val eventsHelper: EventsHelper,
-    private val retrofitLazy: Lazy<retrofit2.Retrofit>,
+    private val retrofitLazy: Lazy<retrofit2.Retrofit>
 ) : Authenticator {
 
     private val mutex = Mutex()
 
     @Volatile private var shouldAbort = false
     private val waitingCount = AtomicInteger(0)
-    
+
     private val tokenRefreshService: Any? by lazy {
         val config = sessionTokenManager.getTokenRefreshConfig()
         config?.let {
@@ -90,7 +89,7 @@ internal class TokenRefreshAuthenticator(
             when (
                 val tokenResponse: Result<*> = safeApiCall {
                     val request = config.createRefreshRequest()
-                    
+
                     // Filter out standard Object methods to find the token refresh method
                     val refreshMethods = service.javaClass.declaredMethods.filter { method ->
                         method.name !in setOf("equals", "hashCode", "toString")
@@ -160,19 +159,18 @@ internal class TokenRefreshAuthenticator(
 
         eventsHelper.logEvent(
             EventsNames.HTTP_ERROR,
-            eventsHelper.getEventProperties(responseCode, 0, exception.message ?: EMPTY_STRING),
+            eventsHelper.getEventProperties(responseCode, 0, exception.message ?: EMPTY_STRING)
         )
 
         return true
     }
-
 
     private fun logErrorEvent(throwable: Throwable?) {
         val msg = "${throwable?.javaClass?.simpleName}  ${throwable?.message}"
 
         eventsHelper.logEvent(
             EventsNames.EVENT_REFRESH_TOKEN_API_IO_FAILURE,
-            eventsHelper.getEventProperties(0, 0, msg),
+            eventsHelper.getEventProperties(0, 0, msg)
         )
     }
 
@@ -188,7 +186,7 @@ internal class TokenRefreshAuthenticator(
 
         return newRequestWithAccessToken(
             response.request,
-            sessionTokenManager.getAccessToken(),
+            sessionTokenManager.getAccessToken()
         )
     }
 
@@ -207,7 +205,6 @@ internal class TokenRefreshAuthenticator(
         const val AUTHORIZATION_HEADER = "Authorization"
     }
 }
-
 
 suspend fun Method.invokeSuspend(obj: Any, vararg args: Any?): Any? =
     suspendCoroutineUninterceptedOrReturn { cont ->

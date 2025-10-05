@@ -66,8 +66,6 @@ configure<PublishingExtension> {
     }
 }
 
-
-
 dependencies {
     implementation(libs.retrofit) {
         exclude(group = "com.squareup.okhttp3", module = "library")
@@ -75,7 +73,7 @@ dependencies {
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.retrofit.kotlinx.serialization.converter)
-    
+
     // Moshi for JSON parsing
     implementation("com.squareup.moshi:moshi:1.15.0")
     implementation("com.squareup.moshi:moshi-kotlin:1.15.0")

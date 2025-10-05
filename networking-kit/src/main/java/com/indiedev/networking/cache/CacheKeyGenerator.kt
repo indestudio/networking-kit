@@ -3,7 +3,6 @@ package com.indiedev.networking.cache
 import okhttp3.Request
 import okio.Buffer
 import okio.ByteString.Companion.encodeUtf8
-import java.security.MessageDigest
 
 /**
  * Generates cache keys for different HTTP methods
@@ -14,7 +13,6 @@ object CacheKeyGenerator {
      * Generate cache key for a request
      */
     fun generateKey(request: Request): String {
-
         return when (request.method.uppercase()) {
             "GET" -> generateGetKey(request)
             "POST", "PUT", "PATCH" -> generateBodyBasedKey(request)
@@ -43,7 +41,6 @@ object CacheKeyGenerator {
 
         return "${request.method}:${url.hashSHA256()}:$bodyHash"
     }
-
 
     /**
      * Fallback key generation for other methods

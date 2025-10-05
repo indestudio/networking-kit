@@ -28,6 +28,6 @@ annotation class Cache(
     /**
      * Time unit for the duration
      */
-    val timeUnit: TimeUnit = TimeUnit.MINUTES,
+    val timeUnit: TimeUnit = TimeUnit.MINUTES
 
 )

@@ -6,7 +6,7 @@ import java.io.IOException
 import java.lang.reflect.Type
 
 internal abstract class MoshiArrayListJsonAdapter<C : MutableCollection<T>?, T> private constructor(
-    private val elementAdapter: JsonAdapter<T>,
+    private val elementAdapter: JsonAdapter<T>
 ) : JsonAdapter<C>() {
     abstract fun newCollection(): C
 
@@ -41,7 +41,7 @@ internal abstract class MoshiArrayListJsonAdapter<C : MutableCollection<T>?, T> 
             if (rawType == ArrayList::class.java) {
                 return@Factory newArrayListAdapter<Any>(
                     type,
-                    moshi,
+                    moshi
                 ).nullSafe()
             }
             null
@@ -49,12 +49,12 @@ internal abstract class MoshiArrayListJsonAdapter<C : MutableCollection<T>?, T> 
 
         private fun <T> newArrayListAdapter(
             type: Type,
-            moshi: Moshi,
+            moshi: Moshi
         ): JsonAdapter<MutableCollection<T>> {
             val elementType =
                 Types.collectionElementType(
                     type,
-                    MutableCollection::class.java,
+                    MutableCollection::class.java
                 )
 
             val elementAdapter: JsonAdapter<T> = moshi.adapter(elementType)
